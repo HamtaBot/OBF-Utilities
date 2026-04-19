@@ -1,0 +1,18 @@
+{
+  "required": true,
+  "package": "com.hamtabot.obfutilities.mixin",
+  "compatibilityLevel": "JAVA_17",
+  "client": [
+    "BlockPlaceMixin",
+    "BlockMineMixin",
+    "KillMixin",
+    "StackKillMixin",
+    "ChatMixin",
+    "JoinMixin",
+    "AutoToolMixin",
+    "LightTextureMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}
