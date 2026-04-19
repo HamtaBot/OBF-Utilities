@@ -1,5 +1,7 @@
 {
   "category.obfutilities": "OBF Utilities",
   "key.obfutilities.toggle_hud": "Afficher/Cacher le HUD",
-  "key.obfutilities.open_config": "Ouvrir la configuration"
+  "key.obfutilities.open_config": "Ouvrir la configuration",
+  "key.obfutilities.add_waypoint": "Ajouter un waypoint",
+  "key.obfutilities.open_waypoints": "key.obfutilities.open_waypoints"
 }

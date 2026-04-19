@@ -21,7 +21,6 @@ public class ModConfig {
 
     public List<CustomBlockEntry> customBlocks = new ArrayList<>();
 
-    // AutoTool
     public boolean autoToolEnabled           = false;
     public boolean autoToolSkipLowDurability = true;
     public boolean autoToolUsePioche  = true;
@@ -31,9 +30,11 @@ public class ModConfig {
     public boolean autoToolUseCisaille= true;
     public boolean autoToolUseEpee    = true;
 
-    // FullBright
     public boolean fullBrightEnabled   = false;
     public float   fullBrightLevel     = 1.0f; // 0.0 = 0%, 15.0 = 1500%
+
+    public boolean waypointsEnabled = true;
+    public int cfgWpX = -1, cfgWpY = 20;
 
     public int cfgLeftX = -1, cfgLeftY = 20;
     public int cfgRightX = -1, cfgRightY = 20;
@@ -41,9 +42,6 @@ public class ModConfig {
     public int cfgBrightX = -1, cfgBrightY = 20;
     public int cfgDebugX = -1, cfgDebugY = 20;
 
-    // Stats serveur mis à jour à la connexion via /utilitiesstats
-    // C'est ultra dégueu mais pas envie de faire une API qui va être abusée
-    // Par les cassos qui décompilent le mod (sert a rien de spam la commande y'a un cache)
     public int serverTotalPlaced = -1;
     public int serverTotalMined  = -1;
     public int serverTotalKills  = -1;
@@ -58,8 +56,6 @@ public class ModConfig {
     public int debugRamX           = 10;
     public int debugRamY           = 140;
 
-    // Pub comme ca plus d'excuses
-    // TODO: bloquer la pub si timer pas fini
     public long adCooldownMs = 15 * 60 * 1000L;
 
     public static class CustomBlockEntry {
@@ -67,9 +63,7 @@ public class ModConfig {
         public boolean trackPlaced  = true; // true=posé, false=miné
         public boolean enabled      = true;
 
-        // Pas utilisé mais cest normal touche pas a ça
         public CustomBlockEntry() {}
-        // Pas utilisé mais cest normal touche pas a ça
         public CustomBlockEntry(String blockId, boolean trackPlaced) {
             this.blockId     = blockId;
             this.trackPlaced = trackPlaced;

@@ -91,7 +91,8 @@ public class OBFHud {
 
         String toggleKey = getBoundKeyName(OBFUtilities.keyToggleHud);
         String configKey = getBoundKeyName(OBFUtilities.keyOpenConfig);
-        String hintText  = "["+toggleKey+"] cacher  ["+configKey+"] config";
+        String wpKey     = OBFUtilities.keyOpenWaypoints != null ? OBFUtilities.keyOpenWaypoints.getBoundKeyLocalizedText().getString() : "W";
+        String hintText  = "["+toggleKey+"] cacher  ["+configKey+"] config  ["+wpKey+"] waypoints";
         context.drawText(tr, hintText, posX+PANEL_WIDTH/2-tr.getWidth(hintText)/2, ty, 0xFF546E7A, false);
         ty += 11;
         context.fill(posX+PADDING, ty, posX+PANEL_WIDTH-PADDING, ty+1, 0xFF1A2A2A);
@@ -113,7 +114,6 @@ public class OBFHud {
                     OBFUtilities.getRateKills(), C_VAL_K);
         }
 
-        // Blocs custom
         List<ModConfig.CustomBlockEntry> customs = OBFUtilities.config.customBlocks;
         for (int i = 0; i < customs.size(); i++) {
             ModConfig.CustomBlockEntry e = customs.get(i);
@@ -256,6 +256,12 @@ public class OBFHud {
         while (OBFUtilities.keyOpenConfig.wasPressed()) {
             if (client.currentScreen == null && visible) client.setScreen(new OBFConfigScreen(this));
         }
+        while (OBFUtilities.keyAddWaypoint.wasPressed()) {
+            if (client.currentScreen == null) client.setScreen(new com.hamtabot.obfutilities.waypoint.WaypointCreateScreen(null));
+        }
+        while (OBFUtilities.keyOpenWaypoints.wasPressed()) {
+            if (client.currentScreen == null) client.setScreen(new com.hamtabot.obfutilities.waypoint.WaypointConfigPanel(null));
+        }
     }
 
     public int getPosX()  { return posX; }
@@ -278,7 +284,6 @@ public class OBFHud {
             } catch (Exception e) { posX=10; posY=10; }
         }
     }
-    // touche pas c'est pas encore sûr de laisser comme ça
     public boolean isVisible() { return visible; }
     public void setVisible(boolean v) { this.visible=v; }
 }

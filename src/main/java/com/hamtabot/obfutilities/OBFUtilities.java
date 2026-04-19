@@ -2,7 +2,11 @@ package com.hamtabot.obfutilities;
 
 import com.hamtabot.obfutilities.config.ModConfig;
 import com.hamtabot.obfutilities.hud.OBFHud;
+import com.hamtabot.obfutilities.waypoint.Waypoint;
+import com.hamtabot.obfutilities.waypoint.WaypointManager;
 import net.fabricmc.api.ClientModInitializer;
+import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
+import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
 import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
 import com.hamtabot.obfutilities.debug.DebugOverlay;
@@ -24,6 +28,8 @@ public class OBFUtilities implements ClientModInitializer {
 
     public static KeyBinding keyToggleHud;
     public static KeyBinding keyOpenConfig;
+    public static KeyBinding keyAddWaypoint;
+    public static KeyBinding keyOpenWaypoints;
 
     private static int sessionBlocksPlaced = 0;
     private static int sessionBlocksMined  = 0;
@@ -52,7 +58,7 @@ public class OBFUtilities implements ClientModInitializer {
 
     private static long sessionStartTime      = System.currentTimeMillis();
     private static long connectionTime          = System.currentTimeMillis();
-    private static final long NOTICE_DURATION_MS = 5 * 60 * 1000L; // 5 minutes
+    private static final long NOTICE_DURATION_MS = 5 * 60 * 1000L;
 
     private static boolean activitySinceLastRequest = false;
 
@@ -67,9 +73,27 @@ public class OBFUtilities implements ClientModInitializer {
                 "key.obfutilities.toggle_hud", InputUtil.Type.KEYSYM, GLFW.GLFW_KEY_K, "category.obfutilities"));
         keyOpenConfig = KeyBindingHelper.registerKeyBinding(new KeyBinding(
                 "key.obfutilities.open_config", InputUtil.Type.KEYSYM, GLFW.GLFW_KEY_O, "category.obfutilities"));
+        keyAddWaypoint = KeyBindingHelper.registerKeyBinding(new KeyBinding(
+                "key.obfutilities.add_waypoint", InputUtil.Type.KEYSYM, GLFW.GLFW_KEY_N, "category.obfutilities"));
+        keyOpenWaypoints = KeyBindingHelper.registerKeyBinding(new KeyBinding(
+                "key.obfutilities.open_waypoints", InputUtil.Type.KEYSYM, GLFW.GLFW_KEY_G, "category.obfutilities"));
 
+        com.hamtabot.obfutilities.waypoint.WaypointManager.load();
+
+        ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) -> {
+            dispatcher.register(ClientCommandManager.literal("obf_wp_import")
+                    .then(ClientCommandManager.argument("data", com.mojang.brigadier.arguments.StringArgumentType.greedyString())
+                            .executes(ctx -> {
+                                String raw = com.mojang.brigadier.arguments.StringArgumentType.getString(ctx, "data");
+                                importWaypointData(raw);
+                                return 1;
+                            })
+                    )
+            );
+        });
         hud = new OBFHud();
         HudRenderCallback.EVENT.register(hud::render);
+        com.hamtabot.obfutilities.waypoint.WaypointRenderer.register();
         net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents.END_CLIENT_TICK.register(client -> {
             FullBright.tick();
             DebugOverlay.tick(client);
@@ -78,7 +102,6 @@ public class OBFUtilities implements ClientModInitializer {
         net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback.EVENT.register(
                 (ctx, delta) -> DebugOverlay.render(ctx, delta));
     }
-
 
     public static void onBlockPlaced(String blockId, String itemId) {
         sessionBlocksPlaced++;
@@ -126,7 +149,6 @@ public class OBFUtilities implements ClientModInitializer {
         adAvailable = false;
     }
 
-
     public static void updateRates() {
         long now     = System.currentTimeMillis();
         long elapsed = now - rateWindowStart;
@@ -164,7 +186,6 @@ public class OBFUtilities implements ClientModInitializer {
         }
     }
 
-
     public static void resetSession() {
         sessionBlocksPlaced = 0;
         sessionBlocksMined  = 0;
@@ -182,8 +203,6 @@ public class OBFUtilities implements ClientModInitializer {
         rateWindowStart     = System.currentTimeMillis();
     }
 
-    // Getters OOOOHHH CÉÉÉÉBOOOO
-
     public static int   getSessionBlocksPlaced()      { return sessionBlocksPlaced; }
     public static int   getSessionBlocksMined()       { return sessionBlocksMined; }
     public static int   getSessionKills()             { return sessionKills; }
@@ -200,7 +219,6 @@ public class OBFUtilities implements ClientModInitializer {
     public static long  getNoticeDurationMs()         { return NOTICE_DURATION_MS; }
     public static void  onJoined()                    { connectionTime = System.currentTimeMillis(); onStatsRefreshed(); }
 
-    // Cooldown bouton refresh stats
     private static long lastStatsRefreshTime = 0;
     private static final long STATS_REFRESH_COOLDOWN_MS = 15 * 60 * 1000L;
     public static boolean canRefreshStats() { return System.currentTimeMillis() - lastStatsRefreshTime >= STATS_REFRESH_COOLDOWN_MS; }
@@ -209,4 +227,17 @@ public class OBFUtilities implements ClientModInitializer {
     public static boolean shouldRequestStats()        { return activitySinceLastRequest; }
     public static void  clearActivityFlag()           { activitySinceLastRequest = false; }
     public static OBFHud getHud()                     { return hud; }
+
+    private static void importWaypointData(String raw) {
+        if (raw.startsWith("OBF-WP:")) {
+            Waypoint wp = Waypoint.fromShareString(raw.substring(7), WaypointManager.getCurrentDimension());
+            if (wp != null) { WaypointManager.add(wp); LOGGER.info("[OBF] Waypoint importé: " + wp.name); }
+        } else if (raw.startsWith("OBF-WPS:")) {
+            String[] parts = raw.substring(8).split(";");
+            for (String part : parts) {
+                Waypoint wp = Waypoint.fromShareString(part, WaypointManager.getCurrentDimension());
+                if (wp != null) { WaypointManager.add(wp); LOGGER.info("[OBF] Waypoint importé: " + wp.name); }
+            }
+        }
+    }
 }

@@ -2,6 +2,8 @@ package com.hamtabot.obfutilities.hud;
 
 import com.hamtabot.obfutilities.OBFUtilities;
 import com.hamtabot.obfutilities.config.ModConfig;
+import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.widget.ButtonWidget;
@@ -57,6 +59,15 @@ public class OBFConfigScreen extends Screen {
     private boolean draggingDebug = false;
     private int dragDebugOffX, dragDebugOffY;
 
+    private static int wpX = -1, wpY = 20;
+    private static final int WP_W = 300;
+    private boolean draggingWp = false;
+    private int dragWpOffX, dragWpOffY;
+    private static int wpScrollOffset = 0;
+    private static int wpConfirmDelete = -1;
+
+
+
     private static int brightX = -1, brightY = 20;
     private static final int BRIGHT_W = 210;
     private boolean draggingBright = false;
@@ -74,25 +85,32 @@ public class OBFConfigScreen extends Screen {
 
     @Override
     protected void init() {
-        // Positions initiales
-        // Charger les positions sauvegardées, ou calculer un layout propre même si les mec en 480p scale gui 4 existent encore
-        // J'vous déteste
+
         if (leftX == -1) {
             if (OBFUtilities.config.cfgLeftX != -1) {
+
                 leftX   = OBFUtilities.config.cfgLeftX;   leftY   = OBFUtilities.config.cfgLeftY;
                 rightX  = OBFUtilities.config.cfgRightX;  rightY  = OBFUtilities.config.cfgRightY;
                 toolX   = OBFUtilities.config.cfgToolX;   toolY   = OBFUtilities.config.cfgToolY;
                 brightX = OBFUtilities.config.cfgBrightX; brightY = OBFUtilities.config.cfgBrightY;
                 debugX  = OBFUtilities.config.cfgDebugX;  debugY  = OBFUtilities.config.cfgDebugY;
+                wpX     = OBFUtilities.config.cfgWpX != -1 ? OBFUtilities.config.cfgWpX : -1;
+                wpY     = OBFUtilities.config.cfgWpY;
             } else {
+
                 int row1Y = 10;
                 int gap   = 8;
+
                 leftX   = 10;                           leftY   = row1Y;
                 rightX  = leftX + LEFT_W + gap;         rightY  = row1Y;
                 toolX   = rightX + RIGHT_W + gap;       toolY   = row1Y;
+
                 int row2Y = row1Y + Math.max(computeLeftH(), Math.max(computeRightH(), computeToolH())) + gap;
                 brightX = 10;                           brightY = row2Y;
                 debugX  = brightX + BRIGHT_W + gap;    debugY  = row2Y;
+                int row3Y = row2Y + computeBrightH() + gap;
+                wpX = 10; wpY = row3Y;
+
             }
         }
         com.hamtabot.obfutilities.debug.DebugOverlay.inConfigScreen = true;
@@ -101,6 +119,8 @@ public class OBFConfigScreen extends Screen {
         initToolPanel();
         initBrightPanel();
         initDebugPanel();
+        initWpPanel();
+
 
         int bx = leftX + 10, bw = LEFT_W - 20;
         int by = leftY + PANEL_HEADER_H + 10 + 14;
@@ -123,7 +143,7 @@ public class OBFConfigScreen extends Screen {
                         }
                     }).dimensions(bx, by, bw, 18).build());
         } else {
-            // reste gris jusqu'au bout la prochaine fois fdp
+
             long rem = OBFUtilities.getStatsRefreshCooldownRemaining();
             long m = rem / 60000, s = (rem / 1000) % 60;
             String timerStr = "Attendez " + String.format("%dm %02ds", m, s) + " avant d'actualiser";
@@ -247,7 +267,7 @@ public class OBFConfigScreen extends Screen {
         by += 28;
 
         by += 14;
-        // Merci chatgpt pour les émote, flemme de les trouver
+
         int hw = (bw - 4) / 2;
         addToolToggle(bx,      by, hw, "⛏ Pioche",   cfg.autoToolUsePioche,   v -> cfg.autoToolUsePioche   = v);
         addToolToggle(bx+hw+4, by, hw, "🪣 Pelle",    cfg.autoToolUsePelle,    v -> cfg.autoToolUsePelle    = v); by += 20;
@@ -290,10 +310,12 @@ public class OBFConfigScreen extends Screen {
 
         int rx = rightX + 10, rw = RIGHT_W - 20;
         for (ModConfig.CustomBlockEntry e : cfg.customBlocks) {
+
             try {
                 Item item = Registries.ITEM.get(new Identifier(e.blockId));
                 context.drawItem(new ItemStack(item), rx+86, ty);
             } catch (Exception ignored) {}
+
             String name = formatBlockName(e.blockId);
             context.drawText(textRenderer, "§7"+name, rx+104, ty+4, 0xFFB0BEC5, false);
             ty += 20;
@@ -302,7 +324,7 @@ public class OBFConfigScreen extends Screen {
         ty += 18 + 26;
 
         if (addingMode) {
-            ty += 18 + 24; // bouton mode
+            ty += 18 + 24;
 
             int listX = rightX + 10;
             int listW = RIGHT_W - 20;
@@ -335,7 +357,6 @@ public class OBFConfigScreen extends Screen {
                     context.fill(listX+1, rowY+BLOCK_ROW_H-1, listX+listW-9, rowY+BLOCK_ROW_H, 0xFF111111);
             }
 
-            // Scrollbar (ntm grosse salope a pas slide comme je veux pendant 1h)
             if (filteredBlocks.size() > BLOCK_LIST_VISIBLE) {
                 int maxScroll = filteredBlocks.size() - BLOCK_LIST_VISIBLE;
                 int sbH = Math.max(20, BLOCK_LIST_HEIGHT * BLOCK_LIST_VISIBLE / filteredBlocks.size());
@@ -351,15 +372,16 @@ public class OBFConfigScreen extends Screen {
         context.drawText(textRenderer, "§7Overlays de débug :", debugX+10, dty, 0xFFB0BEC5, false);
         dty += 14;
 
-    // Pas sur de la couleur bleu sur bar bleu perso j'aime
         drawPanel(context, brightX, brightY, BRIGHT_W, computeBrightH(), "§b◆ FullBright");
         int bty = brightY + PANEL_HEADER_H + 10;
         context.drawText(textRenderer, "§7Luminosité du jeu :", brightX+10, bty, 0xFFB0BEC5, false);
         bty += 14 + 18 + 26 + 14;
+
         int pct = Math.round(cfg.fullBrightLevel * 100f);
         String pctStr = pct + "%";
         int pctX = brightX + BRIGHT_W/2 - textRenderer.getWidth(pctStr)/2;
         context.drawTextWithShadow(textRenderer, "§b" + pctStr, pctX, bty + 3, 0xFF00E5FF);
+
         int barX = brightX + 10 + 24*2 + 4, barW = (BRIGHT_W-20) - 24*4 - 8;
         int barY = bty + 2;
         context.fill(barX, barY, barX+barW, barY+12, 0xFF111111);
@@ -373,9 +395,60 @@ public class OBFConfigScreen extends Screen {
         context.drawText(textRenderer, "§7Outils à utiliser :", toolX+10, tty, 0xFFB0BEC5, false);
 
         context.drawText(textRenderer, "§7[Échap] Sauvegarder", leftX+10, leftY+computeLeftH()-14, 0xFF546E7A, false);
+
         int noteY = leftY + computeLeftH() + 6;
         context.drawText(textRenderer, "§f⚠ Les totaux sont calculés à la connexion uniquement.", leftX+10, noteY, 0xFFFFFFFF, false);
         context.drawText(textRenderer, "§7Pour recalculer, utilisez le bouton Actualiser.", leftX+10, noteY+10, 0xFFB0BEC5, false);
+
+        drawPanel(context, wpX, wpY, WP_W, computeWpH(), "§6◆ Waypoints");
+        int wty = wpY + WP_HEADER_H + 10 + 18 + 24 + 18 + 26;
+        java.util.List<com.hamtabot.obfutilities.waypoint.Waypoint> wpAll = com.hamtabot.obfutilities.waypoint.WaypointManager.getAll();
+        int wpListH = WP_VISIBLE * WP_ROW_H;
+
+        if (wpAll.isEmpty()) {
+            context.drawText(textRenderer, "§7Aucun waypoint. Appuyez sur + Créer.", wpX+10, wty+10, 0xFFB0BEC5, false);
+        }
+
+        for (int i = 0; i < WP_VISIBLE && i + wpScrollOffset < wpAll.size(); i++) {
+            int idx = i + wpScrollOffset;
+            com.hamtabot.obfutilities.waypoint.Waypoint wp = wpAll.get(idx);
+            int rowY = wty + i * WP_ROW_H;
+            boolean cur = com.hamtabot.obfutilities.waypoint.WaypointManager.getCurrentDimension().equals(wp.dimension);
+            boolean hovered = mouseX >= wpX+10 && mouseX <= wpX+WP_W-14 && mouseY >= rowY && mouseY < rowY+WP_ROW_H-2;
+
+            context.fill(wpX+10, rowY, wpX+WP_W-14, rowY+WP_ROW_H-2, hovered ? 0x441A3A6A : (cur ? 0x221A3A4A : 0x11FFFFFF));
+            context.fill(wpX+14, rowY+6, wpX+24, rowY+16, wp.color);
+
+            String enabledMark = wp.enabled ? "§a●" : "§8●";
+            context.drawText(textRenderer, enabledMark, wpX+28, rowY+4, 0xFFFFFFFF, false);
+            context.drawTextWithShadow(textRenderer, "§f" + wp.name, wpX+40, rowY+4, wp.color);
+            context.drawText(textRenderer, "§7" + wp.x+", "+wp.y+", "+wp.z+"  §8["+wp.getDimShort()+"]", wpX+40, rowY+15, 0xFF888888, false);
+
+            if (hovered) {
+                int btnY = rowY + WP_ROW_H - 18;
+                int btnW2 = 64;
+                int gap2 = 4;
+                // Toggle
+                drawHoverBtn(context, textRenderer, wpX+14, btnY, btnW2, 14, wp.enabled ? "§aVisible" : "§8Masqué");
+                // Partager
+                // Supprimer / Confirmer
+                if (wpConfirmDelete == idx) {
+                    drawHoverBtn(context, textRenderer, wpX+14+(btnW2+gap2)*2, btnY, btnW2+20, 14, "§cConfirmer ?");
+                } else {
+                    drawHoverBtn(context, textRenderer, wpX+14+(btnW2+gap2)*2, btnY, btnW2, 14, "§c✗ Suppr.");
+                }
+            }
+        }
+
+        // Scrollbar toujours visible
+        context.fill(wpX+WP_W-12, wty, wpX+WP_W-2, wty+wpListH, 0xFF1A1A1A);
+        if (!wpAll.isEmpty()) {
+            int total = Math.max(wpAll.size(), WP_VISIBLE);
+            int sbH = Math.max(20, wpListH * WP_VISIBLE / total);
+            int maxSc = Math.max(0, wpAll.size() - WP_VISIBLE);
+            int sbY = wty + (maxSc > 0 ? wpScrollOffset * (wpListH-sbH) / maxSc : 0);
+            context.fill(wpX+WP_W-12, sbY, wpX+WP_W-2, sbY+sbH, 0xFF4FC3F7);
+        }
 
         super.render(context, mouseX, mouseY, delta);
 
@@ -401,25 +474,29 @@ public class OBFConfigScreen extends Screen {
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
         if (button == 0) {
-            // config gauche
+
             if (mouseX >= leftX && mouseX <= leftX+LEFT_W && mouseY >= leftY && mouseY <= leftY+PANEL_HEADER_H) {
                 draggingLeft = true; dragLeftOffX=(int)mouseX-leftX; dragLeftOffY=(int)mouseY-leftY; return true;
             }
-            // config droit
+
             if (mouseX >= rightX && mouseX <= rightX+RIGHT_W && mouseY >= rightY && mouseY <= rightY+PANEL_HEADER_H) {
                 draggingRight = true; dragRightOffX=(int)mouseX-rightX; dragRightOffY=(int)mouseY-rightY; return true;
             }
-            // config Debug
+
             if (mouseX >= debugX && mouseX <= debugX+DEBUG_W && mouseY >= debugY && mouseY <= debugY+PANEL_HEADER_H) {
                 draggingDebug = true; dragDebugOffX=(int)mouseX-debugX; dragDebugOffY=(int)mouseY-debugY; return true;
             }
-            // config FullBright
+
             if (mouseX >= brightX && mouseX <= brightX+BRIGHT_W && mouseY >= brightY && mouseY <= brightY+PANEL_HEADER_H) {
                 draggingBright = true; dragBrightOffX=(int)mouseX-brightX; dragBrightOffY=(int)mouseY-brightY; return true;
             }
-            // config AutoTool
+
             if (mouseX >= toolX && mouseX <= toolX+TOOL_W && mouseY >= toolY && mouseY <= toolY+PANEL_HEADER_H) {
                 draggingTool = true; dragToolOffX=(int)mouseX-toolX; dragToolOffY=(int)mouseY-toolY; return true;
+            }
+
+            if (mouseX >= wpX && mouseX <= wpX+WP_W && mouseY >= wpY && mouseY <= wpY+WP_HEADER_H) {
+                draggingWp = true; dragWpOffX=(int)mouseX-wpX; dragWpOffY=(int)mouseY-wpY; return true;
             }
         }
 
@@ -441,7 +518,6 @@ public class OBFConfigScreen extends Screen {
             }
         }
 
-        // overlays debug from config
         if (button == 0) {
             net.minecraft.client.MinecraftClient mc = net.minecraft.client.MinecraftClient.getInstance();
             if (mc.player != null) {
@@ -475,12 +551,42 @@ public class OBFConfigScreen extends Screen {
             }
         }
 
-        // HUD
         int hx = hud.getPosX(), hy = hud.getPosY();
         if (button == 0 && mouseX >= hx && mouseX <= hx+HUD_W && mouseY >= hy && mouseY <= hy+300) {
             boolean inLeft  = mouseX >= leftX  && mouseX <= leftX+LEFT_W   && mouseY >= leftY  && mouseY <= leftY+computeLeftH();
             boolean inRight = mouseX >= rightX && mouseX <= rightX+RIGHT_W && mouseY >= rightY && mouseY <= rightY+computeRightH();
             if (!inLeft && !inRight) { draggingHud=true; dragHudOffX=(int)mouseX-hx; dragHudOffY=(int)mouseY-hy; return true; }
+        }
+
+        if (button == 0) {
+            int wty2 = wpY + WP_HEADER_H + 10 + 18 + 24 + 18 + 26;
+            int wlH = WP_VISIBLE * WP_ROW_H;
+            java.util.List<com.hamtabot.obfutilities.waypoint.Waypoint> wAll = com.hamtabot.obfutilities.waypoint.WaypointManager.getAll();
+
+            if (wAll.size() > WP_VISIBLE && mouseX >= wpX+WP_W-12 && mouseX <= wpX+WP_W-2 && mouseY >= wty2 && mouseY < wty2+wlH) {
+                wpScrollOffset = Math.max(0, Math.min((int)(((mouseY-wty2)/(double)wlH)*wAll.size()), wAll.size()-WP_VISIBLE));
+                return true;
+            }
+
+            int btnW2 = 64, gap2 = 4;
+            for (int i = 0; i < WP_VISIBLE && i + wpScrollOffset < wAll.size(); i++) {
+                int idx = i + wpScrollOffset;
+                com.hamtabot.obfutilities.waypoint.Waypoint wp = wAll.get(idx);
+                int rowY = wty2 + i * WP_ROW_H;
+                boolean hovered = mouseX >= wpX+10 && mouseX <= wpX+WP_W-14 && mouseY >= rowY && mouseY < rowY+WP_ROW_H-2;
+                if (!hovered) continue;
+                int btnY = rowY + WP_ROW_H - 18;
+                if (mouseX >= wpX+14 && mouseX <= wpX+14+btnW2 && mouseY >= btnY && mouseY < btnY+14) {
+                    wp.enabled = !wp.enabled; com.hamtabot.obfutilities.waypoint.WaypointManager.save(); return true;
+                }
+                if (mouseX >= wpX+14+btnW2+gap2 && mouseY >= btnY && mouseY < btnY+14) {
+                    if (wpConfirmDelete == idx) {
+                        com.hamtabot.obfutilities.waypoint.WaypointManager.remove(idx);
+                        wpConfirmDelete = -1; wpScrollOffset = Math.max(0, wpScrollOffset-1);
+                    } else { wpConfirmDelete = idx; }
+                    return true;
+                }
+            }
         }
 
         return super.mouseClicked(mouseX, mouseY, button);
@@ -496,7 +602,7 @@ public class OBFConfigScreen extends Screen {
             }
             return true;
         }
-        // overlays debug
+
         if (com.hamtabot.obfutilities.debug.DebugOverlay.cfgDraggingFps && button == 0) {
             cfg.debugFpsX = (int)mouseX - com.hamtabot.obfutilities.debug.DebugOverlay.cfgDragFpsOffX;
             cfg.debugFpsY = (int)mouseY - com.hamtabot.obfutilities.debug.DebugOverlay.cfgDragFpsOffY;
@@ -512,10 +618,17 @@ public class OBFConfigScreen extends Screen {
             cfg.debugRamY = (int)mouseY - com.hamtabot.obfutilities.debug.DebugOverlay.cfgDragRamOffY;
             return true;
         }
+        if (draggingWp && button == 0) {
+            wpX = Math.max(0, Math.min((int)mouseX-dragWpOffX, this.width-WP_W));
+            wpY = Math.max(0, Math.min((int)mouseY-dragWpOffY, this.height-computeWpH()));
+            OBFUtilities.config.cfgWpX = wpX; OBFUtilities.config.cfgWpY = wpY;
+            clearAndInit(); return true;
+        }
         if (draggingDebug && button == 0) {
             debugX = Math.max(0, Math.min((int)mouseX-dragDebugOffX, this.width-DEBUG_W));
             debugY = Math.max(0, Math.min((int)mouseY-dragDebugOffY, this.height-computeDebugH()));
             OBFUtilities.config.cfgDebugX = debugX; OBFUtilities.config.cfgDebugY = debugY;
+            OBFUtilities.config.cfgWpX = wpX; OBFUtilities.config.cfgWpY = wpY;
             clearAndInit(); return true;
         }
         if (draggingBright && button == 0) {
@@ -548,7 +661,7 @@ public class OBFConfigScreen extends Screen {
 
     @Override
     public boolean mouseReleased(double mouseX, double mouseY, int button) {
-        draggingLeft = draggingRight = draggingHud = draggingScrollbar = draggingTool = draggingBright = draggingDebug = false;
+        draggingLeft = draggingRight = draggingHud = draggingScrollbar = draggingTool = draggingBright = draggingDebug = draggingWp = false;
         com.hamtabot.obfutilities.debug.DebugOverlay.cfgDraggingFps    = false;
         com.hamtabot.obfutilities.debug.DebugOverlay.cfgDraggingCoords = false;
         com.hamtabot.obfutilities.debug.DebugOverlay.cfgDraggingRam    = false;
@@ -564,6 +677,14 @@ public class OBFConfigScreen extends Screen {
                 return true;
             }
         }
+        int wtyS = wpY + WP_HEADER_H + 10 + 18 + 24 + 18 + 26;
+        int wlHS = WP_VISIBLE * WP_ROW_H;
+        if (mouseX >= wpX && mouseX <= wpX+WP_W && mouseY >= wtyS && mouseY < wtyS+wlHS) {
+            int maxScroll = Math.max(0, com.hamtabot.obfutilities.waypoint.WaypointManager.getAll().size() - WP_VISIBLE);
+            wpScrollOffset = Math.max(0, Math.min(wpScrollOffset - (int)amount, maxScroll));
+            return true;
+        }
+
         return super.mouseScrolled(mouseX, mouseY, amount);
     }
 
@@ -572,6 +693,7 @@ public class OBFConfigScreen extends Screen {
     @Override
     public void tick() {
         super.tick();
+
         if (!OBFUtilities.canRefreshStats()) {
             refreshTick++;
             if (refreshTick >= 20) {
@@ -585,11 +707,13 @@ public class OBFConfigScreen extends Screen {
 
     @Override public void close() {
         com.hamtabot.obfutilities.debug.DebugOverlay.inConfigScreen = false;
+
         OBFUtilities.config.cfgLeftX = leftX; OBFUtilities.config.cfgLeftY = leftY;
         OBFUtilities.config.cfgRightX = rightX; OBFUtilities.config.cfgRightY = rightY;
         OBFUtilities.config.cfgToolX = toolX; OBFUtilities.config.cfgToolY = toolY;
         OBFUtilities.config.cfgBrightX = brightX; OBFUtilities.config.cfgBrightY = brightY;
         OBFUtilities.config.cfgDebugX = debugX; OBFUtilities.config.cfgDebugY = debugY;
+        OBFUtilities.config.cfgWpX = wpX; OBFUtilities.config.cfgWpY = wpY;
         cfg.save(); hud.savePosition(); super.close();
     }
     @Override public boolean shouldPause() { return false; }
@@ -601,6 +725,9 @@ public class OBFConfigScreen extends Screen {
         if (brightX == -1) { brightX = 10; brightY = 20; }
         brightX = Math.max(0, Math.min(brightX, this.width-BRIGHT_W));
         brightY = Math.max(0, Math.min(brightY, this.height-computeBrightH()));
+        if (wpX == -1) { wpX = 10; wpY = 20; }
+        wpX = Math.max(0, Math.min(wpX, this.width-WP_W));
+        wpY = Math.max(0, Math.min(wpY, this.height-computeWpH()));
         if (debugX == -1) { debugX = 10; debugY = 20; }
         debugX = Math.max(0, Math.min(debugX, this.width-DEBUG_W));
         debugY = Math.max(0, Math.min(debugY, this.height-computeDebugH()));
@@ -637,8 +764,65 @@ public class OBFConfigScreen extends Screen {
     }
 
     private int computeToolH() {
-        // header + label + autoTool btn + dura btn + label outils + 3 rangées de btns
+
         return PANEL_HEADER_H + 10 + 14 + 18 + 24 + 18 + 28 + 14 + 20 + 20 + 16 + 14;
+    }
+
+    private static final int WP_ROW_H = 36;
+    private static final int WP_VISIBLE = 4;
+    private static final int WP_HEADER_H = 20;
+
+    private void initWpPanel() {
+        int bx = wpX + 10, bw = WP_W - 20;
+        int by = wpY + WP_HEADER_H + 10;
+
+        boolean[] st = { OBFUtilities.config.waypointsEnabled };
+        addDrawableChild(ButtonWidget.builder(
+                Text.literal("Waypoints : " + (st[0] ? "§aON" : "§cOFF")),
+                btn -> { st[0]=!st[0]; OBFUtilities.config.waypointsEnabled=st[0]; btn.setMessage(Text.literal("Waypoints : "+(st[0]?"§aON":"§cOFF"))); }
+        ).dimensions(bx, by, bw, 18).build());
+        by += 24;
+
+        String keyName = OBFUtilities.keyAddWaypoint != null ? OBFUtilities.keyAddWaypoint.getBoundKeyLocalizedText().getString() : "N";
+        addDrawableChild(ButtonWidget.builder(
+                Text.literal("§a+ Créer un waypoint  [" + keyName + "]"),
+                btn -> MinecraftClient.getInstance().setScreen(new com.hamtabot.obfutilities.waypoint.WaypointCreateScreen(() -> MinecraftClient.getInstance().setScreen(this)))
+        ).dimensions(bx, by, bw, 18).build());
+        by += 26 + WP_VISIBLE * WP_ROW_H + 14;
+
+        addDrawableChild(ButtonWidget.builder(Text.literal("§7📁 Ouvrir le dossier des waypoints"),
+                btn -> {
+                    try {
+                        java.io.File configDir = new java.io.File("config").getAbsoluteFile();
+                        String os = System.getProperty("os.name").toLowerCase();
+                        if (os.contains("win")) {
+                            new ProcessBuilder("explorer.exe", configDir.getAbsolutePath()).start();
+                        } else if (os.contains("mac")) {
+                            Runtime.getRuntime().exec(new String[]{"open", configDir.getAbsolutePath()});
+                        } else {
+                            Runtime.getRuntime().exec(new String[]{"xdg-open", configDir.getAbsolutePath()});
+                        }
+                    } catch (Exception e) { OBFUtilities.LOGGER.error("[OBF] Impossible d'ouvrir le dossier: " + e.getMessage()); }
+                }).dimensions(bx, by, bw, 18).build());
+        by += 24;
+
+
+    }
+
+
+
+    private void drawHoverBtn(DrawContext ctx, TextRenderer tr, int x, int y, int w, int h, String label) {
+        ctx.fill(x, y, x+w, y+h, 0xBB1A1A1A);
+        ctx.fill(x, y, x+w, y+1, 0xFF546E7A);
+        ctx.fill(x, y+h-1, x+w, y+h, 0xFF546E7A);
+        ctx.fill(x, y, x+1, y+h, 0xFF546E7A);
+        ctx.fill(x+w-1, y, x+w, y+h, 0xFF546E7A);
+        int tw = tr.getWidth(label);
+        ctx.drawText(tr, label, x + w/2 - tw/2, y+2, 0xFFFFFFFF, false);
+    }
+
+    private int computeWpH() {
+        return WP_HEADER_H + 10 + 18 + 24 + 18 + 26 + WP_VISIBLE * WP_ROW_H + 14 + 18 + 24 + 14;
     }
 
     private int computeLeftH() {

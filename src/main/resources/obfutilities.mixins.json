@@ -10,7 +10,8 @@
     "ChatMixin",
     "JoinMixin",
     "AutoToolMixin",
-    "LightTextureMixin"
+    "LightTextureMixin",
+    "WaypointChatMixin"
   ],
   "injectors": {
     "defaultRequire": 1
