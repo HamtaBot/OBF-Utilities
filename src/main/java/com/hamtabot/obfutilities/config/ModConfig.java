@@ -23,6 +23,7 @@ public class ModConfig {
 
     public boolean autoToolEnabled           = false;
     public boolean autoToolSkipLowDurability = true;
+
     public boolean autoToolUsePioche  = true;
     public boolean autoToolUsePelle   = true;
     public boolean autoToolUseHache   = true;
@@ -31,7 +32,12 @@ public class ModConfig {
     public boolean autoToolUseEpee    = true;
 
     public boolean fullBrightEnabled   = false;
-    public float   fullBrightLevel     = 1.0f; // 0.0 = 0%, 15.0 = 1500%
+    public float   fullBrightLevel     = 1.0f;
+
+    public boolean attackRemapEnabled = false;
+    public int     attackRemapKey     = org.lwjgl.glfw.GLFW.GLFW_KEY_R;
+    public int     cfgAttackRemapX    = -1;
+    public int     cfgAttackRemapY    = 20;
 
     public boolean waypointsEnabled = true;
     public int cfgWpX = -1, cfgWpY = 20;
@@ -60,7 +66,7 @@ public class ModConfig {
 
     public static class CustomBlockEntry {
         public String  blockId      = "minecraft:stone";
-        public boolean trackPlaced  = true; // true=posé, false=miné
+        public boolean trackPlaced  = true;
         public boolean enabled      = true;
 
         public CustomBlockEntry() {}

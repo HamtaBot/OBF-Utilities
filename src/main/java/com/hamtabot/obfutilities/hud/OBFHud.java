@@ -91,8 +91,7 @@ public class OBFHud {
 
         String toggleKey = getBoundKeyName(OBFUtilities.keyToggleHud);
         String configKey = getBoundKeyName(OBFUtilities.keyOpenConfig);
-        String wpKey     = OBFUtilities.keyOpenWaypoints != null ? OBFUtilities.keyOpenWaypoints.getBoundKeyLocalizedText().getString() : "W";
-        String hintText  = "["+toggleKey+"] cacher  ["+configKey+"] config  ["+wpKey+"] waypoints";
+        String hintText  = "["+toggleKey+"] cacher  ["+configKey+"] config";
         context.drawText(tr, hintText, posX+PANEL_WIDTH/2-tr.getWidth(hintText)/2, ty, 0xFF546E7A, false);
         ty += 11;
         context.fill(posX+PADDING, ty, posX+PANEL_WIDTH-PADDING, ty+1, 0xFF1A2A2A);
@@ -260,7 +259,7 @@ public class OBFHud {
             if (client.currentScreen == null) client.setScreen(new com.hamtabot.obfutilities.waypoint.WaypointCreateScreen(null));
         }
         while (OBFUtilities.keyOpenWaypoints.wasPressed()) {
-            if (client.currentScreen == null) client.setScreen(new com.hamtabot.obfutilities.waypoint.WaypointConfigPanel(null));
+            if (client.currentScreen == null) client.setScreen(new OBFConfigScreen(this));
         }
     }
 

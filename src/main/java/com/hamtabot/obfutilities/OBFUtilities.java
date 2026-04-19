@@ -97,6 +97,7 @@ public class OBFUtilities implements ClientModInitializer {
         net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents.END_CLIENT_TICK.register(client -> {
             FullBright.tick();
             DebugOverlay.tick(client);
+
             if (client.player != null) hud.tick(client);
         });
         net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback.EVENT.register(

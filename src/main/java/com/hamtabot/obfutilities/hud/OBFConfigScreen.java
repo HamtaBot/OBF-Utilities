@@ -3,6 +3,7 @@ package com.hamtabot.obfutilities.hud;
 import com.hamtabot.obfutilities.OBFUtilities;
 import com.hamtabot.obfutilities.config.ModConfig;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.item.BlockItem;
 import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
@@ -60,6 +61,11 @@ public class OBFConfigScreen extends Screen {
     private int dragDebugOffX, dragDebugOffY;
 
     private static int wpX = -1, wpY = 20;
+    private static int arX = -1, arY = 20;
+    private static final int AR_W = 230;
+    private boolean draggingAr = false;
+    private int dragArOffX, dragArOffY;
+    private static boolean listeningForKey = false;
     private static final int WP_W = 300;
     private boolean draggingWp = false;
     private int dragWpOffX, dragWpOffY;
@@ -96,6 +102,8 @@ public class OBFConfigScreen extends Screen {
                 debugX  = OBFUtilities.config.cfgDebugX;  debugY  = OBFUtilities.config.cfgDebugY;
                 wpX     = OBFUtilities.config.cfgWpX != -1 ? OBFUtilities.config.cfgWpX : -1;
                 wpY     = OBFUtilities.config.cfgWpY;
+                arX     = OBFUtilities.config.cfgAttackRemapX != -1 ? OBFUtilities.config.cfgAttackRemapX : -1;
+                arY     = OBFUtilities.config.cfgAttackRemapY;
             } else {
 
                 int row1Y = 10;
@@ -110,6 +118,7 @@ public class OBFConfigScreen extends Screen {
                 debugX  = brightX + BRIGHT_W + gap;    debugY  = row2Y;
                 int row3Y = row2Y + computeBrightH() + gap;
                 wpX = 10; wpY = row3Y;
+                arX = WP_W + 18; arY = row3Y;
 
             }
         }
@@ -120,6 +129,7 @@ public class OBFConfigScreen extends Screen {
         initBrightPanel();
         initDebugPanel();
         initWpPanel();
+        initArPanel();
 
 
         int bx = leftX + 10, bw = LEFT_W - 20;
@@ -128,7 +138,8 @@ public class OBFConfigScreen extends Screen {
         addToggleButton(bx, by, bw, "Blocs posés", cfg.showBlocksPlaced, v -> cfg.showBlocksPlaced = v); by += 22;
         addToggleButton(bx, by, bw, "Blocs minés", cfg.showBlocksMined,  v -> cfg.showBlocksMined  = v); by += 22;
         addToggleButton(bx, by, bw, "Mobs tués",   cfg.showMobsKilled,   v -> cfg.showMobsKilled   = v); by += 22;
-        addToggleButton(bx, by, bw, "Pub timer",   cfg.showAdTimer,      v -> cfg.showAdTimer      = v); by += 26;
+        addToggleButton(bx, by, bw, "Pub timer",   cfg.showAdTimer,      v -> cfg.showAdTimer      = v); by += 22;
+        by += 26 - 22;
 
         addDrawableChild(ButtonWidget.builder(Text.literal("Réinitialiser la session"),
                 btn -> OBFUtilities.resetSession()).dimensions(bx, by, bw, 18).build());
@@ -139,7 +150,7 @@ public class OBFConfigScreen extends Screen {
                         if (net.minecraft.client.MinecraftClient.getInstance().getNetworkHandler() != null) {
                             net.minecraft.client.MinecraftClient.getInstance().getNetworkHandler().sendChatCommand("utilitiesstats");
                             OBFUtilities.onStatsRefreshed();
-                            clearAndInit();
+                            saveAllPositions(); clearAndInit();
                         }
                     }).dimensions(bx, by, bw, 18).build());
         } else {
@@ -169,14 +180,14 @@ public class OBFConfigScreen extends Screen {
             ).dimensions(rx+40, ry, 44, 16).build());
 
             addDrawableChild(ButtonWidget.builder(Text.literal("§cX"),
-                    btn -> { cfg.customBlocks.remove(idx); clearAndInit(); }
+                    btn -> { cfg.customBlocks.remove(idx); saveAllPositions(); clearAndInit(); }
             ).dimensions(rx+rw-20, ry, 20, 16).build());
 
             ry += 20;
         }
 
         addDrawableChild(ButtonWidget.builder(Text.literal("§a+ Ajouter un bloc"),
-                btn -> { addingMode = !addingMode; clearAndInit(); }
+                btn -> { addingMode = !addingMode; saveAllPositions(); clearAndInit(); }
         ).dimensions(rx, ry, rw, 18).build());
         ry += 26;
 
@@ -193,6 +204,8 @@ public class OBFConfigScreen extends Screen {
                 blockScrollOffset = 0;
             });
             addDrawableChild(searchField);
+            searchField.setEditable(true);
+            setFocused(searchField);
         }
     }
 
@@ -235,16 +248,16 @@ public class OBFConfigScreen extends Screen {
         by += 14;
         int btnW = 24;
         addDrawableChild(ButtonWidget.builder(Text.literal("<<"),
-                btn -> { cfg.fullBrightLevel = Math.max(0f, cfg.fullBrightLevel - 1f); clearAndInit(); }
+                btn -> { cfg.fullBrightLevel = Math.max(0f, cfg.fullBrightLevel - 1f); saveAllPositions(); clearAndInit(); }
         ).dimensions(bx, by, btnW, 16).build());
         addDrawableChild(ButtonWidget.builder(Text.literal("<"),
-                btn -> { cfg.fullBrightLevel = Math.max(0f, cfg.fullBrightLevel - 0.1f); clearAndInit(); }
+                btn -> { cfg.fullBrightLevel = Math.max(0f, cfg.fullBrightLevel - 0.1f); saveAllPositions(); clearAndInit(); }
         ).dimensions(bx+btnW+2, by, btnW, 16).build());
         addDrawableChild(ButtonWidget.builder(Text.literal(">"),
-                btn -> { cfg.fullBrightLevel = Math.min(15f, cfg.fullBrightLevel + 0.1f); clearAndInit(); }
+                btn -> { cfg.fullBrightLevel = Math.min(15f, cfg.fullBrightLevel + 0.1f); saveAllPositions(); clearAndInit(); }
         ).dimensions(bx+bw-btnW*2-2, by, btnW, 16).build());
         addDrawableChild(ButtonWidget.builder(Text.literal(">>"),
-                btn -> { cfg.fullBrightLevel = Math.min(15f, cfg.fullBrightLevel + 1f); clearAndInit(); }
+                btn -> { cfg.fullBrightLevel = Math.min(15f, cfg.fullBrightLevel + 1f); saveAllPositions(); clearAndInit(); }
         ).dimensions(bx+bw-btnW, by, btnW, 16).build());
     }
 
@@ -380,13 +393,13 @@ public class OBFConfigScreen extends Screen {
         int pct = Math.round(cfg.fullBrightLevel * 100f);
         String pctStr = pct + "%";
         int pctX = brightX + BRIGHT_W/2 - textRenderer.getWidth(pctStr)/2;
-        context.drawTextWithShadow(textRenderer, "§b" + pctStr, pctX, bty + 3, 0xFF00E5FF);
+        context.drawTextWithShadow(textRenderer, "§f" + pctStr, pctX, bty + 3, 0xFFFFFFFF);
 
         int barX = brightX + 10 + 24*2 + 4, barW = (BRIGHT_W-20) - 24*4 - 8;
         int barY = bty + 2;
         context.fill(barX, barY, barX+barW, barY+12, 0xFF111111);
         int filled = (int)(barW * (cfg.fullBrightLevel / 15f));
-        context.fill(barX, barY, barX+filled, barY+12, 0xFF4FC3F7);
+        context.fill(barX, barY, barX+filled, barY+12, 0xFFFFD54F);
 
         drawPanel(context, toolX, toolY, TOOL_W, computeToolH(), "§6◆ AutoTool");
         int tty = toolY + PANEL_HEADER_H + 10;
@@ -399,6 +412,13 @@ public class OBFConfigScreen extends Screen {
         int noteY = leftY + computeLeftH() + 6;
         context.drawText(textRenderer, "§f⚠ Les totaux sont calculés à la connexion uniquement.", leftX+10, noteY, 0xFFFFFFFF, false);
         context.drawText(textRenderer, "§7Pour recalculer, utilisez le bouton Actualiser.", leftX+10, noteY+10, 0xFFB0BEC5, false);
+
+        drawPanel(context, arX, arY, AR_W, computeArH(), "§a◆ Bind Touche");
+        int arDesc = arY + PANEL_HEADER_H + 10 + 18 + 26 + 18 + 4;
+        String arStatus = OBFUtilities.config.attackRemapEnabled
+                ? "§aActif — touche : §f" + getGlfwKeyName(OBFUtilities.config.attackRemapKey)
+                : "§7Inactif — clic gauche par défaut";
+        context.drawText(textRenderer, arStatus, arX+10, arDesc, 0xFFB0BEC5, false);
 
         drawPanel(context, wpX, wpY, WP_W, computeWpH(), "§6◆ Waypoints");
         int wty = wpY + WP_HEADER_H + 10 + 18 + 24 + 18 + 26;
@@ -498,6 +518,9 @@ public class OBFConfigScreen extends Screen {
             if (mouseX >= wpX && mouseX <= wpX+WP_W && mouseY >= wpY && mouseY <= wpY+WP_HEADER_H) {
                 draggingWp = true; dragWpOffX=(int)mouseX-wpX; dragWpOffY=(int)mouseY-wpY; return true;
             }
+            if (mouseX >= arX && mouseX <= arX+AR_W && mouseY >= arY && mouseY <= arY+PANEL_HEADER_H) {
+                draggingAr = true; dragArOffX=(int)mouseX-arX; dragArOffY=(int)mouseY-arY; return true;
+            }
         }
 
         if (addingMode) {
@@ -512,7 +535,7 @@ public class OBFConfigScreen extends Screen {
                 if (row >= 0 && row < filteredBlocks.size()) {
                     cfg.customBlocks.add(new ModConfig.CustomBlockEntry(filteredBlocks.get(row), pendingMode.equals("posé")));
                     addingMode = false;
-                    clearAndInit();
+                    saveAllPositions(); clearAndInit();
                     return true;
                 }
             }
@@ -558,11 +581,13 @@ public class OBFConfigScreen extends Screen {
             if (!inLeft && !inRight) { draggingHud=true; dragHudOffX=(int)mouseX-hx; dragHudOffY=(int)mouseY-hy; return true; }
         }
 
+        // Clics sur les boutons hover des waypoints
         if (button == 0) {
             int wty2 = wpY + WP_HEADER_H + 10 + 18 + 24 + 18 + 26;
             int wlH = WP_VISIBLE * WP_ROW_H;
             java.util.List<com.hamtabot.obfutilities.waypoint.Waypoint> wAll = com.hamtabot.obfutilities.waypoint.WaypointManager.getAll();
 
+            // Scrollbar
             if (wAll.size() > WP_VISIBLE && mouseX >= wpX+WP_W-12 && mouseX <= wpX+WP_W-2 && mouseY >= wty2 && mouseY < wty2+wlH) {
                 wpScrollOffset = Math.max(0, Math.min((int)(((mouseY-wty2)/(double)wlH)*wAll.size()), wAll.size()-WP_VISIBLE));
                 return true;
@@ -603,6 +628,7 @@ public class OBFConfigScreen extends Screen {
             return true;
         }
 
+        // Scrollbar wp
         if (com.hamtabot.obfutilities.debug.DebugOverlay.cfgDraggingFps && button == 0) {
             cfg.debugFpsX = (int)mouseX - com.hamtabot.obfutilities.debug.DebugOverlay.cfgDragFpsOffX;
             cfg.debugFpsY = (int)mouseY - com.hamtabot.obfutilities.debug.DebugOverlay.cfgDragFpsOffY;
@@ -618,42 +644,56 @@ public class OBFConfigScreen extends Screen {
             cfg.debugRamY = (int)mouseY - com.hamtabot.obfutilities.debug.DebugOverlay.cfgDragRamOffY;
             return true;
         }
+        // Capture touche d'attaque
+        if (listeningForKey && button == 0) {
+            // Clic ignoré pendant l'écoute
+            listeningForKey = false; saveAllPositions(); clearAndInit(); return true;
+        }
+
         if (draggingWp && button == 0) {
             wpX = Math.max(0, Math.min((int)mouseX-dragWpOffX, this.width-WP_W));
             wpY = Math.max(0, Math.min((int)mouseY-dragWpOffY, this.height-computeWpH()));
             OBFUtilities.config.cfgWpX = wpX; OBFUtilities.config.cfgWpY = wpY;
-            clearAndInit(); return true;
+            OBFUtilities.config.cfgAttackRemapX = arX; OBFUtilities.config.cfgAttackRemapY = arY;
+            saveAllPositions(); clearAndInit(); return true;
+        }
+        if (draggingAr && button == 0) {
+            arX = Math.max(0, Math.min((int)mouseX-dragArOffX, this.width-AR_W));
+            arY = Math.max(0, Math.min((int)mouseY-dragArOffY, this.height-computeArH()));
+            OBFUtilities.config.cfgAttackRemapX = arX; OBFUtilities.config.cfgAttackRemapY = arY;
+            saveAllPositions(); clearAndInit(); return true;
         }
         if (draggingDebug && button == 0) {
             debugX = Math.max(0, Math.min((int)mouseX-dragDebugOffX, this.width-DEBUG_W));
             debugY = Math.max(0, Math.min((int)mouseY-dragDebugOffY, this.height-computeDebugH()));
             OBFUtilities.config.cfgDebugX = debugX; OBFUtilities.config.cfgDebugY = debugY;
             OBFUtilities.config.cfgWpX = wpX; OBFUtilities.config.cfgWpY = wpY;
-            clearAndInit(); return true;
+            OBFUtilities.config.cfgAttackRemapX = arX; OBFUtilities.config.cfgAttackRemapY = arY;
+            saveAllPositions(); clearAndInit(); return true;
         }
         if (draggingBright && button == 0) {
             brightX = Math.max(0, Math.min((int)mouseX-dragBrightOffX, this.width-BRIGHT_W));
             brightY = Math.max(0, Math.min((int)mouseY-dragBrightOffY, this.height-computeBrightH()));
             OBFUtilities.config.cfgBrightX = brightX; OBFUtilities.config.cfgBrightY = brightY;
-            clearAndInit(); return true;
+            saveAllPositions(); clearAndInit(); return true;
         }
         if (draggingTool && button == 0) {
             toolX = Math.max(0, Math.min((int)mouseX-dragToolOffX, this.width-TOOL_W));
             toolY = Math.max(0, Math.min((int)mouseY-dragToolOffY, this.height-computeToolH()));
             OBFUtilities.config.cfgToolX = toolX; OBFUtilities.config.cfgToolY = toolY;
-            clearAndInit(); return true;
+            saveAllPositions(); clearAndInit(); return true;
         }
         if (draggingLeft && button == 0) {
             leftX = Math.max(0, Math.min((int)mouseX-dragLeftOffX, this.width-LEFT_W));
             leftY = Math.max(0, Math.min((int)mouseY-dragLeftOffY, this.height-computeLeftH()));
             OBFUtilities.config.cfgLeftX = leftX; OBFUtilities.config.cfgLeftY = leftY;
-            clearAndInit(); return true;
+            saveAllPositions(); clearAndInit(); return true;
         }
         if (draggingRight && button == 0) {
             rightX = Math.max(0, Math.min((int)mouseX-dragRightOffX, this.width-RIGHT_W));
             rightY = Math.max(0, Math.min((int)mouseY-dragRightOffY, this.height-computeRightH()));
             OBFUtilities.config.cfgRightX = rightX; OBFUtilities.config.cfgRightY = rightY;
-            clearAndInit(); return true;
+            saveAllPositions(); clearAndInit(); return true;
         }
         if (draggingHud && button == 0) { hud.setPos((int)mouseX-dragHudOffX, (int)mouseY-dragHudOffY); return true; }
         return super.mouseDragged(mouseX, mouseY, button, dx, dy);
@@ -661,7 +701,7 @@ public class OBFConfigScreen extends Screen {
 
     @Override
     public boolean mouseReleased(double mouseX, double mouseY, int button) {
-        draggingLeft = draggingRight = draggingHud = draggingScrollbar = draggingTool = draggingBright = draggingDebug = draggingWp = false;
+        draggingLeft = draggingRight = draggingHud = draggingScrollbar = draggingTool = draggingBright = draggingDebug = draggingWp = draggingAr = false;
         com.hamtabot.obfutilities.debug.DebugOverlay.cfgDraggingFps    = false;
         com.hamtabot.obfutilities.debug.DebugOverlay.cfgDraggingCoords = false;
         com.hamtabot.obfutilities.debug.DebugOverlay.cfgDraggingRam    = false;
@@ -677,6 +717,7 @@ public class OBFConfigScreen extends Screen {
                 return true;
             }
         }
+        // Scroll liste waypoints
         int wtyS = wpY + WP_HEADER_H + 10 + 18 + 24 + 18 + 26;
         int wlHS = WP_VISIBLE * WP_ROW_H;
         if (mouseX >= wpX && mouseX <= wpX+WP_W && mouseY >= wtyS && mouseY < wtyS+wlHS) {
@@ -686,6 +727,48 @@ public class OBFConfigScreen extends Screen {
         }
 
         return super.mouseScrolled(mouseX, mouseY, amount);
+    }
+
+    @Override
+    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        if (listeningForKey) {
+            if (keyCode == org.lwjgl.glfw.GLFW.GLFW_KEY_ESCAPE) {
+                listeningForKey = false; saveAllPositions(); clearAndInit(); return true;
+            }
+            OBFUtilities.config.attackRemapKey = keyCode;
+            OBFUtilities.config.save();
+            if (OBFUtilities.config.attackRemapEnabled) {
+                MinecraftClient.getInstance().options.attackKey.setBoundKey(
+                        net.minecraft.client.util.InputUtil.fromKeyCode(keyCode, 0));
+                net.minecraft.client.option.KeyBinding.updateKeysByCode();
+            }
+            listeningForKey = false; saveAllPositions(); clearAndInit(); return true;
+        }
+        return super.keyPressed(keyCode, scanCode, modifiers);
+    }
+
+    @Override
+    public void resize(MinecraftClient client, int width, int height) {
+        // Sauvegarder toutes les positions courantes dans la config
+        OBFUtilities.config.cfgLeftX = leftX;   OBFUtilities.config.cfgLeftY = leftY;
+        OBFUtilities.config.cfgRightX = rightX;  OBFUtilities.config.cfgRightY = rightY;
+        OBFUtilities.config.cfgToolX = toolX;    OBFUtilities.config.cfgToolY = toolY;
+        OBFUtilities.config.cfgBrightX = brightX; OBFUtilities.config.cfgBrightY = brightY;
+        OBFUtilities.config.cfgDebugX = debugX;  OBFUtilities.config.cfgDebugY = debugY;
+        OBFUtilities.config.cfgWpX = wpX;        OBFUtilities.config.cfgWpY = wpY;
+        // Reset TOUS les panneaux pour forcer un rechargement depuis la config
+        leftX = -1; rightX = -1; toolX = -1; brightX = -1; debugX = -1; wpX = -1; arX = -1;
+        super.resize(client, width, height);
+    }
+
+    private void saveAllPositions() {
+        if (leftX != -1)  { OBFUtilities.config.cfgLeftX = leftX;   OBFUtilities.config.cfgLeftY = leftY; }
+        if (rightX != -1) { OBFUtilities.config.cfgRightX = rightX; OBFUtilities.config.cfgRightY = rightY; }
+        if (toolX != -1)  { OBFUtilities.config.cfgToolX = toolX;   OBFUtilities.config.cfgToolY = toolY; }
+        if (brightX != -1){ OBFUtilities.config.cfgBrightX = brightX; OBFUtilities.config.cfgBrightY = brightY; }
+        if (debugX != -1) { OBFUtilities.config.cfgDebugX = debugX; OBFUtilities.config.cfgDebugY = debugY; }
+        if (wpX != -1)    { OBFUtilities.config.cfgWpX = wpX;       OBFUtilities.config.cfgWpY = wpY; }
+        if (arX != -1)    { OBFUtilities.config.cfgAttackRemapX = arX; OBFUtilities.config.cfgAttackRemapY = arY; }
     }
 
     private int refreshTick = 0;
@@ -698,7 +781,11 @@ public class OBFConfigScreen extends Screen {
             refreshTick++;
             if (refreshTick >= 20) {
                 refreshTick = 0;
-                clearAndInit();
+                // Ne pas recharger si le joueur est en train d'écrire dans un champ
+                boolean fieldFocused = searchField != null && searchField.isFocused();
+                if (!fieldFocused && !listeningForKey) {
+                    saveAllPositions(); clearAndInit();
+                }
             }
         } else {
             refreshTick = 0;
@@ -714,6 +801,7 @@ public class OBFConfigScreen extends Screen {
         OBFUtilities.config.cfgBrightX = brightX; OBFUtilities.config.cfgBrightY = brightY;
         OBFUtilities.config.cfgDebugX = debugX; OBFUtilities.config.cfgDebugY = debugY;
         OBFUtilities.config.cfgWpX = wpX; OBFUtilities.config.cfgWpY = wpY;
+        OBFUtilities.config.cfgAttackRemapX = arX; OBFUtilities.config.cfgAttackRemapY = arY;
         cfg.save(); hud.savePosition(); super.close();
     }
     @Override public boolean shouldPause() { return false; }
@@ -728,6 +816,9 @@ public class OBFConfigScreen extends Screen {
         if (wpX == -1) { wpX = 10; wpY = 20; }
         wpX = Math.max(0, Math.min(wpX, this.width-WP_W));
         wpY = Math.max(0, Math.min(wpY, this.height-computeWpH()));
+        if (arX == -1) { arX = WP_W + 18; arY = 20; }
+        arX = Math.max(0, Math.min(arX, this.width-AR_W));
+        arY = Math.max(0, Math.min(arY, this.height-computeArH()));
         if (debugX == -1) { debugX = 10; debugY = 20; }
         debugX = Math.max(0, Math.min(debugX, this.width-DEBUG_W));
         debugY = Math.max(0, Math.min(debugY, this.height-computeDebugH()));
@@ -811,6 +902,70 @@ public class OBFConfigScreen extends Screen {
 
 
 
+    private static net.minecraft.client.util.InputUtil.Key originalAttackKey = null;
+
+    private void initArPanel() {
+        int bx = arX + 10, bw = AR_W - 20;
+        int by = arY + PANEL_HEADER_H + 10;
+
+        boolean[] st = { OBFUtilities.config.attackRemapEnabled };
+        addDrawableChild(ButtonWidget.builder(
+                Text.literal("Bind touche : " + (st[0] ? "§aON" : "§cOFF")),
+                btn -> {
+                    st[0] = !st[0];
+                    OBFUtilities.config.attackRemapEnabled = st[0];
+                    MinecraftClient client = MinecraftClient.getInstance();
+                    if (st[0]) {
+                        // Sauvegarder la touche originale si pas encore fait
+                        if (originalAttackKey == null) {
+                            originalAttackKey = client.options.attackKey.getBoundKeyTranslationKey().equals("key.mouse.left")
+                                    ? net.minecraft.client.util.InputUtil.Type.MOUSE.createFromCode(0)
+                                    : net.minecraft.client.util.InputUtil.fromTranslationKey(client.options.attackKey.getBoundKeyTranslationKey());
+                        }
+                        // Assigner la nouvelle touche directement dans Minecraft
+                        client.options.attackKey.setBoundKey(
+                                net.minecraft.client.util.InputUtil.fromKeyCode(OBFUtilities.config.attackRemapKey, 0));
+                        net.minecraft.client.option.KeyBinding.updateKeysByCode();
+                    } else {
+                        // Restaurer la touche d'origine (clic gauche)
+                        if (originalAttackKey != null) {
+                            client.options.attackKey.setBoundKey(originalAttackKey);
+                            net.minecraft.client.option.KeyBinding.updateKeysByCode();
+                            originalAttackKey = null;
+                        }
+                    }
+                    OBFUtilities.config.save();
+                    btn.setMessage(Text.literal("Bind touche : " + (st[0] ? "§aON" : "§cOFF")));
+                }
+        ).dimensions(bx, by, bw, 18).build());
+        by += 26;
+
+        String keyName = getGlfwKeyName(OBFUtilities.config.attackRemapKey);
+        addDrawableChild(ButtonWidget.builder(
+                Text.literal(listeningForKey ? "§eAppuyez sur une touche..." : "§7Touche : §f" + keyName),
+                btn -> { listeningForKey = true; saveAllPositions(); clearAndInit(); }
+        ).dimensions(bx, by, bw, 18).build());
+    }
+
+    private String getGlfwKeyName(int key) {
+        String name = org.lwjgl.glfw.GLFW.glfwGetKeyName(key, 0);
+        if (name != null) return name.toUpperCase();
+        return switch (key) {
+            case org.lwjgl.glfw.GLFW.GLFW_KEY_SPACE -> "ESPACE";
+            case org.lwjgl.glfw.GLFW.GLFW_KEY_LEFT_SHIFT -> "SHIFT G";
+            case org.lwjgl.glfw.GLFW.GLFW_KEY_RIGHT_SHIFT -> "SHIFT D";
+            case org.lwjgl.glfw.GLFW.GLFW_KEY_LEFT_CONTROL -> "CTRL G";
+            case org.lwjgl.glfw.GLFW.GLFW_KEY_RIGHT_CONTROL -> "CTRL D";
+            case org.lwjgl.glfw.GLFW.GLFW_KEY_TAB -> "TAB";
+            case org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER -> "ENTREE";
+            default -> "GLFW#" + key;
+        };
+    }
+
+    private int computeArH() {
+        return PANEL_HEADER_H + 10 + 18 + 26 + 18 + 16;
+    }
+
     private void drawHoverBtn(DrawContext ctx, TextRenderer tr, int x, int y, int w, int h, String label) {
         ctx.fill(x, y, x+w, y+h, 0xBB1A1A1A);
         ctx.fill(x, y, x+w, y+1, 0xFF546E7A);
@@ -826,7 +981,7 @@ public class OBFConfigScreen extends Screen {
     }
 
     private int computeLeftH() {
-        return PANEL_HEADER_H + 10 + 14 + 22*4 + 26 + 18 + 24 + 18 + 18;
+        return PANEL_HEADER_H + 10 + 14 + 22 + 22*4 + 26 + 18 + 24 + 18 + 18;
     }
 
     private int computeRightH() {
