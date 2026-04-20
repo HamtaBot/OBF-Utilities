@@ -1,9 +1,7 @@
 package com.hamtabot.obfutilities.mixin;
 
 import com.hamtabot.obfutilities.OBFUtilities;
-import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.ClientPlayNetworkHandler;
-import net.minecraft.network.packet.c2s.play.ChatMessageC2SPacket;
 import net.minecraft.network.packet.s2c.play.GameMessageS2CPacket;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;

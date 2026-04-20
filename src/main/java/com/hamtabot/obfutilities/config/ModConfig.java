@@ -32,8 +32,6 @@ public class ModConfig {
     public boolean autoToolUseEpee    = true;
 
     public boolean fullBrightEnabled   = false;
-    public float   fullBrightLevel     = 1.0f;
-
     public boolean attackRemapEnabled = false;
     public int     attackRemapKey     = org.lwjgl.glfw.GLFW.GLFW_KEY_R;
     public int     cfgAttackRemapX    = -1;

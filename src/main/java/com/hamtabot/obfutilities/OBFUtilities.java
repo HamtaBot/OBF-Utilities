@@ -242,12 +242,12 @@ public class OBFUtilities implements ClientModInitializer {
 
     private static void importWaypointData(String raw) {
         if (raw.startsWith("OBF-WP:")) {
-            Waypoint wp = Waypoint.fromShareString(raw.substring(7), WaypointManager.getCurrentDimension());
+            Waypoint wp = Waypoint.fromShareString(raw.substring(7));
             if (wp != null) { WaypointManager.add(wp); LOGGER.info("[OBF] Waypoint importé: " + wp.name); }
         } else if (raw.startsWith("OBF-WPS:")) {
             String[] parts = raw.substring(8).split(";");
             for (String part : parts) {
-                Waypoint wp = Waypoint.fromShareString(part, WaypointManager.getCurrentDimension());
+                Waypoint wp = Waypoint.fromShareString(part);
                 if (wp != null) { WaypointManager.add(wp); LOGGER.info("[OBF] Waypoint importé: " + wp.name); }
             }
         }

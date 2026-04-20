@@ -8,6 +8,7 @@ import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.gui.widget.TextFieldWidget;
+import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.registry.Registries;
 import net.minecraft.text.Text;
@@ -22,8 +23,6 @@ public class OBFConfigScreen extends Screen {
     private final OBFHud hud;
     private final ModConfig cfg;
 
-    private static final float SCALE_MIN = 0.6f;
-    private static final float SCALE_MAX = 2.0f;
     private static final int RESIZE_GRIP = 8;
 
     private static final int BASE_LEFT_W   = 220;

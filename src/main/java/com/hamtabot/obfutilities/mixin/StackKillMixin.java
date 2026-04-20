@@ -26,11 +26,18 @@ public class StackKillMixin {
 
     private static final Map<Integer, Integer> stackCounts = new HashMap<>();
     private static final Pattern STACK_PATTERN = Pattern.compile("x(\\d+)");
+    private static int ticksSinceCleanup = 0;
 
     @Inject(method = "onEntityTrackerUpdate", at = @At("TAIL"))
     private void onEntityTrackerUpdate(EntityTrackerUpdateS2CPacket packet, CallbackInfo ci) {
         MinecraftClient client = MinecraftClient.getInstance();
         if (client.world == null || client.player == null) return;
+
+        ticksSinceCleanup++;
+        if (ticksSinceCleanup >= 200) {
+            ticksSinceCleanup = 0;
+            stackCounts.keySet().removeIf(id -> client.world.getEntityById(id) == null);
+        }
 
         Entity entity = client.world.getEntityById(packet.id());
         if (!(entity instanceof LivingEntity) || entity instanceof PlayerEntity) return;

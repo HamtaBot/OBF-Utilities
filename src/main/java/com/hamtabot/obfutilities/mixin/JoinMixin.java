@@ -1,5 +1,7 @@
 package com.hamtabot.obfutilities.mixin;
 
+import com.hamtabot.obfutilities.OBFUtilities;
+import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.ClientPlayNetworkHandler;
 import net.minecraft.network.packet.s2c.play.GameJoinS2CPacket;
 import org.spongepowered.asm.mixin.Mixin;
@@ -13,11 +15,11 @@ public class JoinMixin {
     @Inject(method = "onGameJoin", at = @At("TAIL"))
     private void onGameJoin(GameJoinS2CPacket packet, CallbackInfo ci) {
         // ATT 3 sec, vue que monsieur serveur est pas content si tes pas en pré-load de pack
-        com.hamtabot.obfutilities.OBFUtilities.onJoined();
+        OBFUtilities.onJoined();
         new Thread(() -> {
             try {
                 Thread.sleep(3000);
-                net.minecraft.client.MinecraftClient client = net.minecraft.client.MinecraftClient.getInstance();
+                MinecraftClient client = MinecraftClient.getInstance();
                 if (client.player != null) {
                     client.execute(() -> {
                         if (client.getNetworkHandler() != null) {

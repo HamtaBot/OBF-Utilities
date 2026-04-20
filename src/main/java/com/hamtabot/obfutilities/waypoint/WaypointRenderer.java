@@ -1,6 +1,7 @@
 package com.hamtabot.obfutilities.waypoint;
 
 import com.hamtabot.obfutilities.OBFUtilities;
+import com.mojang.blaze3d.systems.RenderSystem;
 import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderContext;
 import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents;
 import net.minecraft.client.MinecraftClient;
@@ -33,7 +34,7 @@ public class WaypointRenderer {
         List<Waypoint> wps = WaypointManager.getForCurrentDimension();
         if (wps.isEmpty()) return;
 
-        com.mojang.blaze3d.systems.RenderSystem.disableDepthTest();
+        RenderSystem.disableDepthTest();
 
         VertexConsumerProvider.Immediate immediate = client.getBufferBuilders().getEntityVertexConsumers();
 
@@ -69,6 +70,6 @@ public class WaypointRenderer {
         }
 
         immediate.draw();
-        com.mojang.blaze3d.systems.RenderSystem.enableDepthTest();
+        RenderSystem.enableDepthTest();
     }
 }

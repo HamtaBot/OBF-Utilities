@@ -1,6 +1,5 @@
 package com.hamtabot.obfutilities.waypoint;
 
-import com.hamtabot.obfutilities.OBFUtilities;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
@@ -73,9 +72,7 @@ public class WaypointCreateScreen extends Screen {
 
         String posStr = "Position : " + px + ", " + py + ", " + pz + " (" + dimension.replace("minecraft:","") + ")";
         context.drawText(textRenderer, "§7" + posStr, cx+10, cy+28, 0xFFB0BEC5, false);
-
         context.drawText(textRenderer, "§7Nom :", cx+10, cy+62, 0xFFB0BEC5, false);
-
         context.drawText(textRenderer, "§7Couleur :", cx+10, cy+80, 0xFFB0BEC5, false);
 
         int colorSwatchSize = 28;
@@ -128,7 +125,7 @@ public class WaypointCreateScreen extends Screen {
     private void createWaypoint() {
         String name = nameField.getText().trim();
         if (name.isEmpty()) name = "Waypoint";
-        WaypointManager.add(new Waypoint(name, px, py, pz, dimension, PRESET_COLORS[selectedColor], false));
+        WaypointManager.add(new Waypoint(name, px, py, pz, dimension, PRESET_COLORS[selectedColor]));
         if (onCreated != null) onCreated.run();
         close();
     }

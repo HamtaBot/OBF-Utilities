@@ -1,6 +1,7 @@
 package com.hamtabot.obfutilities.mixin;
 
 import com.hamtabot.obfutilities.OBFUtilities;
+import net.minecraft.client.MinecraftClient;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.entity.player.PlayerEntity;
@@ -15,7 +16,7 @@ public class KillMixin {
     @Inject(method = "onDeath", at = @At("HEAD"))
     private void onDeath(DamageSource source, CallbackInfo ci) {
         if (source.getAttacker() instanceof PlayerEntity player) {
-            net.minecraft.client.MinecraftClient client = net.minecraft.client.MinecraftClient.getInstance();
+            MinecraftClient client = MinecraftClient.getInstance();
             if (client.player != null && client.player == player) {
                 LivingEntity entity = (LivingEntity)(Object)this;
                 if (!(entity instanceof PlayerEntity)) {

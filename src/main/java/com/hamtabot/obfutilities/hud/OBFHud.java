@@ -248,7 +248,6 @@ public class OBFHud {
             }
         }
 
-
         while (OBFUtilities.keyToggleHud.wasPressed()) visible = !visible;
         while (OBFUtilities.keyOpenConfig.wasPressed()) {
             if (client.currentScreen == null && visible) client.setScreen(new OBFConfigScreen(this));
