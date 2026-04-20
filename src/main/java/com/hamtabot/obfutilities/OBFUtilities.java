@@ -7,6 +7,7 @@ import com.hamtabot.obfutilities.waypoint.WaypointManager;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
 import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
 import com.hamtabot.obfutilities.debug.DebugOverlay;
@@ -57,7 +58,7 @@ public class OBFUtilities implements ClientModInitializer {
     private static boolean adAvailable  = true;
 
     private static long sessionStartTime      = System.currentTimeMillis();
-    private static long connectionTime          = System.currentTimeMillis();
+    private static long connectionTime        = System.currentTimeMillis();
     private static final long NOTICE_DURATION_MS = 5 * 60 * 1000L;
 
     private static boolean activitySinceLastRequest = false;
@@ -78,7 +79,15 @@ public class OBFUtilities implements ClientModInitializer {
         keyOpenWaypoints = KeyBindingHelper.registerKeyBinding(new KeyBinding(
                 "key.obfutilities.open_waypoints", InputUtil.Type.KEYSYM, GLFW.GLFW_KEY_G, "category.obfutilities"));
 
-        com.hamtabot.obfutilities.waypoint.WaypointManager.load();
+        WaypointManager.load();
+
+        ClientLifecycleEvents.CLIENT_STARTED.register(client -> {
+            if (config.attackRemapEnabled) {
+                client.options.attackKey.setBoundKey(
+                        InputUtil.fromKeyCode(config.attackRemapKey, 0));
+                KeyBinding.updateKeysByCode();
+            }
+        });
 
         ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) -> {
             dispatcher.register(ClientCommandManager.literal("obf_wp_import")
@@ -91,15 +100,17 @@ public class OBFUtilities implements ClientModInitializer {
                     )
             );
         });
+
         hud = new OBFHud();
         HudRenderCallback.EVENT.register(hud::render);
         com.hamtabot.obfutilities.waypoint.WaypointRenderer.register();
+
         net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents.END_CLIENT_TICK.register(client -> {
             FullBright.tick();
             DebugOverlay.tick(client);
-
             if (client.player != null) hud.tick(client);
         });
+
         net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback.EVENT.register(
                 (ctx, delta) -> DebugOverlay.render(ctx, delta));
     }
@@ -204,30 +215,30 @@ public class OBFUtilities implements ClientModInitializer {
         rateWindowStart     = System.currentTimeMillis();
     }
 
-    public static int   getSessionBlocksPlaced()      { return sessionBlocksPlaced; }
-    public static int   getSessionBlocksMined()       { return sessionBlocksMined; }
-    public static int   getSessionKills()             { return sessionKills; }
-    public static int   getSessionCustom(int i)       { return sessionCustom.getOrDefault(i, 0); }
-    public static float getRateBlocksPlaced()         { return rateBlocksPlaced; }
-    public static float getRateBlocksMined()          { return rateBlocksMined; }
-    public static float getRateKills()                { return rateKills; }
-    public static float getRateCustom(int i)          { return rateCustom.getOrDefault(i, 0f); }
-    public static boolean isAdAvailable()             { return adAvailable; }
-    public static long  getLastAdTime()               { return lastAdTime; }
-    public static long  getAdCooldownMs()             { return config.adCooldownMs; }
-    public static long  getSessionStartTime()         { return sessionStartTime; }
-    public static long  getConnectionTime()           { return connectionTime; }
-    public static long  getNoticeDurationMs()         { return NOTICE_DURATION_MS; }
-    public static void  onJoined()                    { connectionTime = System.currentTimeMillis(); onStatsRefreshed(); }
+    public static int   getSessionBlocksPlaced()  { return sessionBlocksPlaced; }
+    public static int   getSessionBlocksMined()   { return sessionBlocksMined; }
+    public static int   getSessionKills()         { return sessionKills; }
+    public static int   getSessionCustom(int i)   { return sessionCustom.getOrDefault(i, 0); }
+    public static float getRateBlocksPlaced()     { return rateBlocksPlaced; }
+    public static float getRateBlocksMined()      { return rateBlocksMined; }
+    public static float getRateKills()            { return rateKills; }
+    public static float getRateCustom(int i)      { return rateCustom.getOrDefault(i, 0f); }
+    public static boolean isAdAvailable()         { return adAvailable; }
+    public static long  getLastAdTime()           { return lastAdTime; }
+    public static long  getAdCooldownMs()         { return config.adCooldownMs; }
+    public static long  getSessionStartTime()     { return sessionStartTime; }
+    public static long  getConnectionTime()       { return connectionTime; }
+    public static long  getNoticeDurationMs()     { return NOTICE_DURATION_MS; }
+    public static void  onJoined()                { connectionTime = System.currentTimeMillis(); onStatsRefreshed(); }
 
     private static long lastStatsRefreshTime = 0;
     private static final long STATS_REFRESH_COOLDOWN_MS = 15 * 60 * 1000L;
-    public static boolean canRefreshStats() { return System.currentTimeMillis() - lastStatsRefreshTime >= STATS_REFRESH_COOLDOWN_MS; }
+    public static boolean canRefreshStats()               { return System.currentTimeMillis() - lastStatsRefreshTime >= STATS_REFRESH_COOLDOWN_MS; }
     public static long getStatsRefreshCooldownRemaining() { return Math.max(0, STATS_REFRESH_COOLDOWN_MS - (System.currentTimeMillis() - lastStatsRefreshTime)); }
-    public static void onStatsRefreshed() { lastStatsRefreshTime = System.currentTimeMillis(); }
-    public static boolean shouldRequestStats()        { return activitySinceLastRequest; }
-    public static void  clearActivityFlag()           { activitySinceLastRequest = false; }
-    public static OBFHud getHud()                     { return hud; }
+    public static void onStatsRefreshed()                 { lastStatsRefreshTime = System.currentTimeMillis(); }
+    public static boolean shouldRequestStats()            { return activitySinceLastRequest; }
+    public static void  clearActivityFlag()               { activitySinceLastRequest = false; }
+    public static OBFHud getHud()                         { return hud; }
 
     private static void importWaypointData(String raw) {
         if (raw.startsWith("OBF-WP:")) {

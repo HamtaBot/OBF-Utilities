@@ -48,6 +48,15 @@ public class ModConfig {
     public int cfgBrightX = -1, cfgBrightY = 20;
     public int cfgDebugX = -1, cfgDebugY = 20;
 
+    public float scaleLeft   = 1.0f;
+    public float scaleRight  = 1.0f;
+    public float scaleTool   = 1.0f;
+    public float scaleBright = 1.0f;
+    public float scaleDebug  = 1.0f;
+    public float scaleWp     = 1.0f;
+    public float scaleAr     = 1.0f;
+    public float scaleHud    = 1.0f;
+
     public int serverTotalPlaced = -1;
     public int serverTotalMined  = -1;
     public int serverTotalKills  = -1;
@@ -81,6 +90,14 @@ public class ModConfig {
             try (Reader r = Files.newBufferedReader(CONFIG_FILE)) {
                 ModConfig cfg = GSON.fromJson(r, ModConfig.class);
                 if (cfg.customBlocks == null) cfg.customBlocks = new ArrayList<>();
+                cfg.scaleLeft   = clampScale(cfg.scaleLeft);
+                cfg.scaleRight  = clampScale(cfg.scaleRight);
+                cfg.scaleTool   = clampScale(cfg.scaleTool);
+                cfg.scaleBright = clampScale(cfg.scaleBright);
+                cfg.scaleDebug  = clampScale(cfg.scaleDebug);
+                cfg.scaleWp     = clampScale(cfg.scaleWp);
+                cfg.scaleAr     = clampScale(cfg.scaleAr);
+                cfg.scaleHud    = clampScale(cfg.scaleHud);
                 return cfg;
             } catch (Exception e) {
                 OBFUtilities.LOGGER.error("[OBF] Erreur chargement config: " + e.getMessage());
@@ -89,6 +106,10 @@ public class ModConfig {
         ModConfig cfg = new ModConfig();
         cfg.save();
         return cfg;
+    }
+
+    public static float clampScale(float v) {
+        return Math.max(0.6f, Math.min(2.0f, v == 0f ? 1.0f : v));
     }
 
     public void save() {
