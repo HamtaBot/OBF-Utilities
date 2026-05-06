@@ -41,12 +41,12 @@ public class OBFConfigScreen extends Screen {
     private int DEBUG_W()  { return s(BASE_DEBUG_W,  cfg.scaleDebug);  }
     private int BRIGHT_W() { return s(BASE_BRIGHT_W, cfg.scaleBright); }
     private int WP_W()     { return s(BASE_WP_W,     cfg.scaleWp);     }
-    private int AR_W()     { return s(BASE_AR_W,     cfg.scaleAr);     }
+    private int AR_W()     { return s(BASE_AR_W,      cfg.scaleAr);     }
 
-    private int PH(float sc)    { return s(20, sc); }
-    private int ROW(float sc)   { return s(22, sc); }
-    private int BTN(float sc)   { return s(18, sc); }
-    private int PAD(float sc)   { return s(10, sc); }
+    private int PH(float sc)  { return s(20, sc); }
+    private int ROW(float sc) { return s(22, sc); }
+    private int BTN(float sc) { return s(18, sc); }
+    private int PAD(float sc) { return s(10, sc); }
 
     private static int leftX = -1, leftY = 20;
     private boolean draggingLeft = false;
@@ -101,7 +101,6 @@ public class OBFConfigScreen extends Screen {
     private int resizeHudStartX;
     private float resizeHudStartScale;
 
-
     private static boolean listeningForKey = false;
     private static int wpScrollOffset = 0;
     private static int wpConfirmDelete = -1;
@@ -138,6 +137,20 @@ public class OBFConfigScreen extends Screen {
         ctx.fill(gx+2, gy+6, gx+4, gy+8, 0xAAFFD54F);
         ctx.fill(gx+4, gy+4, gx+6, gy+6, 0xAAFFD54F);
         ctx.fill(gx+6, gy+2, gx+8, gy+4, 0xAAFFD54F);
+    }
+
+    /** Retourne la position [x, y] de l'icône ? pour un panneau donné */
+    private int[] getHelpIconPos(int px, int py, int pw, float sc) {
+        int size = s(10, sc);
+        int ix = px + pw - size - s(3, sc);
+        int iy = py + (PH(sc) - size) / 2;
+        return new int[]{ ix, iy };
+    }
+
+    private boolean isHelpIconHovered(double mx, double my, int px, int py, int pw, float sc) {
+        int[] pos = getHelpIconPos(px, py, pw, sc);
+        int size = s(10, sc);
+        return mx >= pos[0] && mx <= pos[0]+size && my >= pos[1] && my <= pos[1]+size;
     }
 
     @Override
@@ -301,12 +314,12 @@ public class OBFConfigScreen extends Screen {
         ).dimensions(bx, by, bw, BTN(sc)).build()); by += BTN(sc) + s(10, sc) + s(14, sc);
 
         int hw = (bw - s(4, sc)) / 2;
-        addToolToggle(bx,         by, hw, sc, "⛏ Pioche",   cfg.autoToolUsePioche,   v -> cfg.autoToolUsePioche   = v);
-        addToolToggle(bx+hw+s(4,sc), by, hw, sc, "🪣 Pelle",  cfg.autoToolUsePelle,    v -> cfg.autoToolUsePelle    = v); by += s(20, sc);
-        addToolToggle(bx,         by, hw, sc, "🪓 Hache",    cfg.autoToolUseHache,    v -> cfg.autoToolUseHache    = v);
-        addToolToggle(bx+hw+s(4,sc), by, hw, sc, "🌾 Houe",   cfg.autoToolUseHoue,     v -> cfg.autoToolUseHoue     = v); by += s(20, sc);
-        addToolToggle(bx,         by, hw, sc, "✂ Cisaille",  cfg.autoToolUseCisaille, v -> cfg.autoToolUseCisaille = v);
-        addToolToggle(bx+hw+s(4,sc), by, hw, sc, "⚔ Épée",   cfg.autoToolUseEpee,     v -> cfg.autoToolUseEpee     = v);
+        addToolToggle(bx,            by, hw, sc, "⛏ Pioche",   cfg.autoToolUsePioche,   v -> cfg.autoToolUsePioche   = v);
+        addToolToggle(bx+hw+s(4,sc), by, hw, sc, "🪣 Pelle",   cfg.autoToolUsePelle,    v -> cfg.autoToolUsePelle    = v); by += s(20, sc);
+        addToolToggle(bx,            by, hw, sc, "🪓 Hache",    cfg.autoToolUseHache,    v -> cfg.autoToolUseHache    = v);
+        addToolToggle(bx+hw+s(4,sc), by, hw, sc, "🌾 Houe",    cfg.autoToolUseHoue,     v -> cfg.autoToolUseHoue     = v); by += s(20, sc);
+        addToolToggle(bx,            by, hw, sc, "✂ Cisaille", cfg.autoToolUseCisaille, v -> cfg.autoToolUseCisaille = v);
+        addToolToggle(bx+hw+s(4,sc), by, hw, sc, "⚔ Épée",    cfg.autoToolUseEpee,     v -> cfg.autoToolUseEpee     = v);
     }
 
     private void initWpPanel() {
@@ -402,6 +415,26 @@ public class OBFConfigScreen extends Screen {
 
         super.render(context, mouseX, mouseY, delta);
         com.hamtabot.obfutilities.debug.DebugOverlay.render(context, delta);
+
+        // Tooltips des ? — rendu après super.render pour passer par-dessus les boutons
+        renderHelpTooltipIfHovered(context, mouseX, mouseY, leftX,   leftY,   LEFT_W(),   cfg.scaleLeft);
+        renderHelpTooltipIfHovered(context, mouseX, mouseY, rightX,  rightY,  RIGHT_W(),  cfg.scaleRight);
+        renderHelpTooltipIfHovered(context, mouseX, mouseY, toolX,   toolY,   TOOL_W(),   cfg.scaleTool);
+        renderHelpTooltipIfHovered(context, mouseX, mouseY, brightX, brightY, BRIGHT_W(), cfg.scaleBright);
+        renderHelpTooltipIfHovered(context, mouseX, mouseY, debugX,  debugY,  DEBUG_W(),  cfg.scaleDebug);
+        renderHelpTooltipIfHovered(context, mouseX, mouseY, wpX,     wpY,     WP_W(),     cfg.scaleWp);
+        renderHelpTooltipIfHovered(context, mouseX, mouseY, arX,     arY,     AR_W(),     cfg.scaleAr);
+    }
+
+    private void renderHelpTooltipIfHovered(DrawContext context, int mouseX, int mouseY,
+                                            int px, int py, int pw, float sc) {
+        if (isHelpIconHovered(mouseX, mouseY, px, py, pw, sc)) {
+            List<Text> lines = java.util.Arrays.asList(
+                    Text.literal("§eGlisser §7— maintenir clic gauche sur l'en-tête"),
+                    Text.literal("§e↘ Redimensionner §7— glisser le coin bas-droit")
+            );
+            context.drawTooltip(textRenderer, lines, mouseX, mouseY);
+        }
     }
 
     private void renderLeftPanel(DrawContext ctx, int mouseX, int mouseY) {
@@ -411,7 +444,7 @@ public class OBFConfigScreen extends Screen {
         ctx.drawText(textRenderer, "§7Sections à afficher :", leftX+PAD(sc), leftY+PH(sc)+PAD(sc), 0xFFB0BEC5, false);
         ctx.drawText(textRenderer, "§7[Échap] Sauvegarder", leftX+PAD(sc), leftY+h-s(14, sc), 0xFF546E7A, false);
         int noteY = leftY + h + s(6, sc);
-        ctx.drawText(textRenderer, "§f⚠ Les totaux sont calculés à la connexion uniquement.", leftX+PAD(sc), noteY, 0xFFFFFFFF, false);
+        ctx.drawText(textRenderer, "§f⚠ Les totaux sont calculés à la connexion.", leftX+PAD(sc), noteY, 0xFFFFFFFF, false);
         ctx.drawText(textRenderer, "§7Pour recalculer, utilisez le bouton Actualiser.", leftX+PAD(sc), noteY+s(10, sc), 0xFFB0BEC5, false);
     }
 
@@ -534,7 +567,18 @@ public class OBFConfigScreen extends Screen {
         ctx.fill(x, y, x+1, y+h, 0xFFFFD54F);
         ctx.fill(x+w-1, y, x+w, y+h, 0xFFFFD54F);
         ctx.fill(x+1, y+1, x+w-1, y+PH(sc), 0xFF1A1A1A);
-        ctx.drawTextWithShadow(textRenderer, title + "  §7— glisser / ↘ redimensionner", x+s(8, sc), y+s(6, sc), 0xFFFFD54F);
+        // Titre sans le texte "glisser / ↘ redimensionner"
+        ctx.drawTextWithShadow(textRenderer, title, x+s(8, sc), y+s(6, sc), 0xFFFFD54F);
+        // Icône ? rouge en haut à droite
+        int size = s(10, sc);
+        int[] pos = getHelpIconPos(x, y, w, sc);
+        int ix = pos[0], iy = pos[1];
+        ctx.fill(ix, iy, ix+size, iy+size, 0xFF6B1010);
+        ctx.fill(ix,        iy,        ix+size, iy+1,      0xFFCC2222);
+        ctx.fill(ix,        iy+size-1, ix+size, iy+size,   0xFFCC2222);
+        ctx.fill(ix,        iy,        ix+1,    iy+size,   0xFFCC2222);
+        ctx.fill(ix+size-1, iy,        ix+size, iy+size,   0xFFCC2222);
+        ctx.drawText(textRenderer, "§c?", ix + Math.max(1, (size - textRenderer.getWidth("?")) / 2), iy+s(1, sc), 0xFFFF4444, false);
         drawResizeGrip(ctx, x, y, w, h);
     }
 
@@ -549,16 +593,13 @@ public class OBFConfigScreen extends Screen {
             if (inResizeGrip(mouseX, mouseY, wpX,     wpY,     WP_W(),     computeWpH()))     { resizingWp     = true; resizeWpStartX     = (int)mouseX; resizeWpStartScale     = cfg.scaleWp;     return true; }
             if (inResizeGrip(mouseX, mouseY, arX,     arY,     AR_W(),     computeArH()))     { resizingAr     = true; resizeArStartX     = (int)mouseX; resizeArStartScale     = cfg.scaleAr;     return true; }
 
-            int hx = hud.getPosX(), hy = hud.getPosY();
-            int hudW = s(220, cfg.scaleHud);
-
-            if (mouseX >= leftX && mouseX <= leftX+LEFT_W()     && mouseY >= leftY   && mouseY <= leftY+PH(cfg.scaleLeft))     { draggingLeft   = true; dragLeftOffX  =(int)mouseX-leftX;  dragLeftOffY  =(int)mouseY-leftY;  return true; }
-            if (mouseX >= rightX && mouseX <= rightX+RIGHT_W()  && mouseY >= rightY  && mouseY <= rightY+PH(cfg.scaleRight))   { draggingRight  = true; dragRightOffX =(int)mouseX-rightX; dragRightOffY =(int)mouseY-rightY; return true; }
-            if (mouseX >= debugX && mouseX <= debugX+DEBUG_W()  && mouseY >= debugY  && mouseY <= debugY+PH(cfg.scaleDebug))   { draggingDebug  = true; dragDebugOffX =(int)mouseX-debugX; dragDebugOffY =(int)mouseY-debugY; return true; }
-            if (mouseX >= brightX && mouseX <= brightX+BRIGHT_W()&& mouseY >= brightY && mouseY <= brightY+PH(cfg.scaleBright)){ draggingBright = true; dragBrightOffX=(int)mouseX-brightX;dragBrightOffY=(int)mouseY-brightY;return true; }
-            if (mouseX >= toolX && mouseX <= toolX+TOOL_W()     && mouseY >= toolY   && mouseY <= toolY+PH(cfg.scaleTool))     { draggingTool   = true; dragToolOffX  =(int)mouseX-toolX;  dragToolOffY  =(int)mouseY-toolY;  return true; }
-            if (mouseX >= wpX && mouseX <= wpX+WP_W()           && mouseY >= wpY     && mouseY <= wpY+PH(cfg.scaleWp))         { draggingWp     = true; dragWpOffX    =(int)mouseX-wpX;    dragWpOffY    =(int)mouseY-wpY;    return true; }
-            if (mouseX >= arX && mouseX <= arX+AR_W()           && mouseY >= arY     && mouseY <= arY+PH(cfg.scaleAr))         { draggingAr     = true; dragArOffX    =(int)mouseX-arX;    dragArOffY    =(int)mouseY-arY;    return true; }
+            if (mouseX >= leftX  && mouseX <= leftX+LEFT_W()   && mouseY >= leftY   && mouseY <= leftY+PH(cfg.scaleLeft))    { draggingLeft   = true; dragLeftOffX  =(int)mouseX-leftX;   dragLeftOffY  =(int)mouseY-leftY;   return true; }
+            if (mouseX >= rightX && mouseX <= rightX+RIGHT_W() && mouseY >= rightY  && mouseY <= rightY+PH(cfg.scaleRight))  { draggingRight  = true; dragRightOffX =(int)mouseX-rightX;  dragRightOffY =(int)mouseY-rightY;  return true; }
+            if (mouseX >= debugX && mouseX <= debugX+DEBUG_W() && mouseY >= debugY  && mouseY <= debugY+PH(cfg.scaleDebug))  { draggingDebug  = true; dragDebugOffX =(int)mouseX-debugX;  dragDebugOffY =(int)mouseY-debugY;  return true; }
+            if (mouseX >= brightX && mouseX <= brightX+BRIGHT_W() && mouseY >= brightY && mouseY <= brightY+PH(cfg.scaleBright)) { draggingBright = true; dragBrightOffX=(int)mouseX-brightX; dragBrightOffY=(int)mouseY-brightY; return true; }
+            if (mouseX >= toolX  && mouseX <= toolX+TOOL_W()   && mouseY >= toolY   && mouseY <= toolY+PH(cfg.scaleTool))    { draggingTool   = true; dragToolOffX  =(int)mouseX-toolX;   dragToolOffY  =(int)mouseY-toolY;   return true; }
+            if (mouseX >= wpX    && mouseX <= wpX+WP_W()       && mouseY >= wpY     && mouseY <= wpY+PH(cfg.scaleWp))        { draggingWp     = true; dragWpOffX    =(int)mouseX-wpX;     dragWpOffY    =(int)mouseY-wpY;     return true; }
+            if (mouseX >= arX    && mouseX <= arX+AR_W()       && mouseY >= arY     && mouseY <= arY+PH(cfg.scaleAr))        { draggingAr     = true; dragArOffX    =(int)mouseX-arX;     dragArOffY    =(int)mouseY-arY;     return true; }
         }
 
         if (addingMode) {
@@ -581,9 +622,9 @@ public class OBFConfigScreen extends Screen {
         if (button == 0) {
             MinecraftClient mc = MinecraftClient.getInstance();
             if (mc.player != null) {
-                if (cfg.debugShowFps) { int[] b = com.hamtabot.obfutilities.debug.DebugOverlay.getFpsBounds(textRenderer, mc); if (mouseX>=b[0]&&mouseX<=b[0]+b[2]&&mouseY>=b[1]&&mouseY<=b[1]+b[3]) { com.hamtabot.obfutilities.debug.DebugOverlay.cfgDraggingFps=true; com.hamtabot.obfutilities.debug.DebugOverlay.cfgDragFpsOffX=(int)mouseX-b[0]; com.hamtabot.obfutilities.debug.DebugOverlay.cfgDragFpsOffY=(int)mouseY-b[1]; return true; } }
+                if (cfg.debugShowFps)    { int[] b = com.hamtabot.obfutilities.debug.DebugOverlay.getFpsBounds(textRenderer, mc);    if (mouseX>=b[0]&&mouseX<=b[0]+b[2]&&mouseY>=b[1]&&mouseY<=b[1]+b[3]) { com.hamtabot.obfutilities.debug.DebugOverlay.cfgDraggingFps=true;    com.hamtabot.obfutilities.debug.DebugOverlay.cfgDragFpsOffX=(int)mouseX-b[0];    com.hamtabot.obfutilities.debug.DebugOverlay.cfgDragFpsOffY=(int)mouseY-b[1];    return true; } }
                 if (cfg.debugShowCoords) { int[] b = com.hamtabot.obfutilities.debug.DebugOverlay.getCoordsBounds(textRenderer, mc); if (mouseX>=b[0]&&mouseX<=b[0]+b[2]&&mouseY>=b[1]&&mouseY<=b[1]+b[3]) { com.hamtabot.obfutilities.debug.DebugOverlay.cfgDraggingCoords=true; com.hamtabot.obfutilities.debug.DebugOverlay.cfgDragCoordsOffX=(int)mouseX-b[0]; com.hamtabot.obfutilities.debug.DebugOverlay.cfgDragCoordsOffY=(int)mouseY-b[1]; return true; } }
-                if (cfg.debugShowRam) { int[] b = com.hamtabot.obfutilities.debug.DebugOverlay.getRamBounds(textRenderer); if (mouseX>=b[0]&&mouseX<=b[0]+b[2]&&mouseY>=b[1]&&mouseY<=b[1]+b[3]) { com.hamtabot.obfutilities.debug.DebugOverlay.cfgDraggingRam=true; com.hamtabot.obfutilities.debug.DebugOverlay.cfgDragRamOffX=(int)mouseX-b[0]; com.hamtabot.obfutilities.debug.DebugOverlay.cfgDragRamOffY=(int)mouseY-b[1]; return true; } }
+                if (cfg.debugShowRam)    { int[] b = com.hamtabot.obfutilities.debug.DebugOverlay.getRamBounds(textRenderer);         if (mouseX>=b[0]&&mouseX<=b[0]+b[2]&&mouseY>=b[1]&&mouseY<=b[1]+b[3]) { com.hamtabot.obfutilities.debug.DebugOverlay.cfgDraggingRam=true;    com.hamtabot.obfutilities.debug.DebugOverlay.cfgDragRamOffX=(int)mouseX-b[0];    com.hamtabot.obfutilities.debug.DebugOverlay.cfgDragRamOffY=(int)mouseY-b[1];    return true; } }
             }
         }
 
@@ -595,7 +636,7 @@ public class OBFConfigScreen extends Screen {
                 resizingHud = true; resizeHudStartX = (int)mouseX; resizeHudStartScale = cfg.scaleHud; return true;
             }
             if (mouseX >= hx && mouseX <= hx+hudW && mouseY >= hy && mouseY <= hy+hudH) {
-                boolean inLeft  = mouseX>=leftX && mouseX<=leftX+LEFT_W() && mouseY>=leftY && mouseY<=leftY+computeLeftH();
+                boolean inLeft  = mouseX>=leftX && mouseX<=leftX+LEFT_W()   && mouseY>=leftY  && mouseY<=leftY+computeLeftH();
                 boolean inRight = mouseX>=rightX && mouseX<=rightX+RIGHT_W() && mouseY>=rightY && mouseY<=rightY+computeRightH();
                 if (!inLeft && !inRight) { draggingHud=true; dragHudOffX=(int)mouseX-hx; dragHudOffY=(int)mouseY-hy; return true; }
             }
@@ -669,9 +710,7 @@ public class OBFConfigScreen extends Screen {
 
     @Override
     public boolean mouseReleased(double mouseX, double mouseY, int button) {
-        if (resizingLeft || resizingRight || resizingTool || resizingDebug || resizingBright || resizingWp || resizingAr || resizingHud) {
-            cfg.save();
-        }
+        if (resizingLeft || resizingRight || resizingTool || resizingDebug || resizingBright || resizingWp || resizingAr || resizingHud) cfg.save();
         resizingLeft = resizingRight = resizingTool = resizingDebug = resizingBright = resizingWp = resizingAr = resizingHud = false;
         draggingLeft = draggingRight = draggingHud = draggingScrollbar = draggingTool = draggingBright = draggingDebug = draggingWp = draggingAr = false;
         com.hamtabot.obfutilities.debug.DebugOverlay.cfgDraggingFps = com.hamtabot.obfutilities.debug.DebugOverlay.cfgDraggingCoords = com.hamtabot.obfutilities.debug.DebugOverlay.cfgDraggingRam = false;
@@ -716,12 +755,12 @@ public class OBFConfigScreen extends Screen {
     }
 
     private void saveAllPositions() {
-        if (leftX != -1)  { cfg.cfgLeftX=leftX;   cfg.cfgLeftY=leftY; }
-        if (rightX != -1) { cfg.cfgRightX=rightX;  cfg.cfgRightY=rightY; }
-        if (toolX != -1)  { cfg.cfgToolX=toolX;    cfg.cfgToolY=toolY; }
+        if (leftX != -1)  { cfg.cfgLeftX=leftX;    cfg.cfgLeftY=leftY; }
+        if (rightX != -1) { cfg.cfgRightX=rightX;   cfg.cfgRightY=rightY; }
+        if (toolX != -1)  { cfg.cfgToolX=toolX;     cfg.cfgToolY=toolY; }
         if (brightX != -1){ cfg.cfgBrightX=brightX; cfg.cfgBrightY=brightY; }
-        if (debugX != -1) { cfg.cfgDebugX=debugX;  cfg.cfgDebugY=debugY; }
-        if (wpX != -1)    { cfg.cfgWpX=wpX;        cfg.cfgWpY=wpY; }
+        if (debugX != -1) { cfg.cfgDebugX=debugX;   cfg.cfgDebugY=debugY; }
+        if (wpX != -1)    { cfg.cfgWpX=wpX;         cfg.cfgWpY=wpY; }
         if (arX != -1)    { cfg.cfgAttackRemapX=arX; cfg.cfgAttackRemapY=arY; }
     }
 
@@ -751,12 +790,12 @@ public class OBFConfigScreen extends Screen {
     @Override public boolean shouldPause() { return false; }
 
     private void clampPanels() {
-        if (toolX==-1) toolX=10;   toolX=Math.max(0, Math.min(toolX,  this.width-TOOL_W()));   toolY=Math.max(0, Math.min(toolY,  this.height-computeToolH()));
+        if (toolX==-1) toolX=10;     toolX=Math.max(0,Math.min(toolX,  this.width-TOOL_W()));   toolY=Math.max(0,Math.min(toolY,  this.height-computeToolH()));
         if (brightX==-1){brightX=10;brightY=20;} brightX=Math.max(0,Math.min(brightX,this.width-BRIGHT_W())); brightY=Math.max(0,Math.min(brightY,this.height-computeBrightH()));
         if (wpX==-1){wpX=10;wpY=20;} wpX=Math.max(0,Math.min(wpX,this.width-WP_W())); wpY=Math.max(0,Math.min(wpY,this.height-computeWpH()));
         if (arX==-1){arX=WP_W()+18;arY=20;} arX=Math.max(0,Math.min(arX,this.width-AR_W())); arY=Math.max(0,Math.min(arY,this.height-computeArH()));
         if (debugX==-1){debugX=10;debugY=20;} debugX=Math.max(0,Math.min(debugX,this.width-DEBUG_W())); debugY=Math.max(0,Math.min(debugY,this.height-computeDebugH()));
-        leftX=Math.max(0,Math.min(leftX,this.width-LEFT_W())); leftY=Math.max(0,Math.min(leftY,this.height-computeLeftH()));
+        leftX=Math.max(0,Math.min(leftX,this.width-LEFT_W()));   leftY=Math.max(0,Math.min(leftY,this.height-computeLeftH()));
         rightX=Math.max(0,Math.min(rightX,this.width-RIGHT_W())); rightY=Math.max(0,Math.min(rightY,this.height-computeRightH()));
     }
 
@@ -771,8 +810,7 @@ public class OBFConfigScreen extends Screen {
 
     private int getRightListY() {
         float sc = cfg.scaleRight;
-        int ty = rightY + PH(sc) + PAD(sc);
-        ty += s(14, sc);
+        int ty = rightY + PH(sc) + PAD(sc) + s(14, sc);
         ty += cfg.customBlocks.size() * s(20, sc);
         ty += BTN(sc) + s(8, sc);
         ty += BTN(sc) + s(6, sc);

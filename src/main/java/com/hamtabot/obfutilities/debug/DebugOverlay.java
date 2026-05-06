@@ -16,6 +16,8 @@ public class DebugOverlay {
     private static int dragCoordsOffX, dragCoordsOffY;
     private static int dragRamOffX, dragRamOffY;
 
+    private static boolean wasMouseDown = false;
+
     public static boolean cfgDraggingFps    = false;
     public static boolean cfgDraggingCoords = false;
     public static boolean cfgDraggingRam    = false;
@@ -112,7 +114,10 @@ public class DebugOverlay {
     }
 
     public static void tick(MinecraftClient client) {
-        if (client.currentScreen != null) return;
+        if (client.currentScreen != null) {
+            wasMouseDown = false;
+            return;
+        }
         if (client.player == null) return;
 
         long window = client.getWindow().getHandle();
@@ -122,6 +127,9 @@ public class DebugOverlay {
         int mouseX = (int) (mx[0] / scale), mouseY = (int) (my[0] / scale);
         boolean down = GLFW.glfwGetMouseButton(window, GLFW.GLFW_MOUSE_BUTTON_LEFT) == GLFW.GLFW_PRESS;
 
+        boolean justPressed = down && !wasMouseDown;
+        wasMouseDown = down;
+
         TextRenderer tr = client.textRenderer;
 
         if (OBFUtilities.config.debugShowFps) {
@@ -129,7 +137,7 @@ public class DebugOverlay {
             String text = fps + " FPS";
             int w = tr.getWidth(text) + PAD_X * 2 + 6;
             int x = OBFUtilities.config.debugFpsX, y = OBFUtilities.config.debugFpsY;
-            if (down && !draggingFps && !draggingCoords && !draggingRam
+            if (justPressed && !draggingFps && !draggingCoords && !draggingRam
                     && mouseX >= x && mouseX <= x + w && mouseY >= y && mouseY <= y + H) {
                 draggingFps = true; dragFpsOffX = mouseX - x; dragFpsOffY = mouseY - y;
             }
@@ -145,7 +153,7 @@ public class DebugOverlay {
                 String textPlain = "X " + px + "  Y " + py + "  Z " + pz + "  S";
                 int w = tr.getWidth(textPlain) + PAD_X * 2 + 6;
                 int x = OBFUtilities.config.debugCoordsX, y = OBFUtilities.config.debugCoordsY;
-                if (down && !draggingFps && !draggingCoords && !draggingRam
+                if (justPressed && !draggingFps && !draggingCoords && !draggingRam
                         && mouseX >= x && mouseX <= x + w && mouseY >= y && mouseY <= y + H) {
                     draggingCoords = true; dragCoordsOffX = mouseX - x; dragCoordsOffY = mouseY - y;
                 }
@@ -163,7 +171,7 @@ public class DebugOverlay {
             String text = used + " / " + max + " Mo";
             int w = tr.getWidth(text) + PAD_X * 2 + 6 + 40;
             int x = OBFUtilities.config.debugRamX, y = OBFUtilities.config.debugRamY;
-            if (down && !draggingFps && !draggingCoords && !draggingRam
+            if (justPressed && !draggingFps && !draggingCoords && !draggingRam
                     && mouseX >= x && mouseX <= x + w && mouseY >= y && mouseY <= y + H) {
                 draggingRam = true; dragRamOffX = mouseX - x; dragRamOffY = mouseY - y;
             }
