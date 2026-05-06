@@ -114,8 +114,12 @@ public class DebugOverlay {
     }
 
     public static void tick(MinecraftClient client) {
-        if (client.currentScreen != null) {
-            wasMouseDown = false;
+        if (client.currentScreen != null) return;
+        if (client.player == null) return;
+        if (!inConfigScreen) {
+            draggingFps = false;
+            draggingCoords = false;
+            draggingRam = false;
             return;
         }
         if (client.player == null) return;
