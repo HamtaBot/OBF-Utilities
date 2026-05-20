@@ -87,6 +87,11 @@ public class OBFUtilities implements ClientModInitializer {
                         InputUtil.fromKeyCode(config.attackRemapKey, 0));
                 KeyBinding.updateKeysByCode();
             }
+            if (config.useRemapEnabled) {
+                client.options.useKey.setBoundKey(
+                        InputUtil.fromKeyCode(config.useRemapKey, 0));
+                KeyBinding.updateKeysByCode();
+            }
         });
 
         ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) -> {

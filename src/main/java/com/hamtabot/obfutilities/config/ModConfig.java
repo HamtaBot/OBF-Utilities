@@ -37,6 +37,11 @@ public class ModConfig {
     public int     cfgAttackRemapX    = -1;
     public int     cfgAttackRemapY    = 20;
 
+    public boolean useRemapEnabled = false;
+    public int     useRemapKey     = org.lwjgl.glfw.GLFW.GLFW_KEY_F;
+    public int     cfgUseRemapX    = -1;
+    public int     cfgUseRemapY    = 20;
+
     public boolean waypointsEnabled = true;
     public int cfgWpX = -1, cfgWpY = 20;
 
@@ -53,6 +58,7 @@ public class ModConfig {
     public float scaleDebug  = 1.0f;
     public float scaleWp     = 1.0f;
     public float scaleAr     = 1.0f;
+    public float scaleUr     = 1.0f; // NOUVEAU
     public float scaleHud    = 1.0f;
 
     public int serverTotalPlaced = -1;
@@ -95,6 +101,7 @@ public class ModConfig {
                 cfg.scaleDebug  = clampScale(cfg.scaleDebug);
                 cfg.scaleWp     = clampScale(cfg.scaleWp);
                 cfg.scaleAr     = clampScale(cfg.scaleAr);
+                cfg.scaleUr     = clampScale(cfg.scaleUr);
                 cfg.scaleHud    = clampScale(cfg.scaleHud);
                 return cfg;
             } catch (Exception e) {
