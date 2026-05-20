@@ -220,6 +220,13 @@ public class OBFUtilities implements ClientModInitializer {
         rateWindowStart     = System.currentTimeMillis();
     }
 
+    public static void resetCustomSession(int index) {
+        sessionCustom.remove(index);
+        recentCustom.remove(index);
+        rateCustom.remove(index);
+        lastCustomTime.remove(index);
+    }
+
     public static int   getSessionBlocksPlaced()  { return sessionBlocksPlaced; }
     public static int   getSessionBlocksMined()   { return sessionBlocksMined; }
     public static int   getSessionKills()         { return sessionKills; }

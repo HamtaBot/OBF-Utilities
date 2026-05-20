@@ -255,8 +255,12 @@ public class OBFConfigScreen extends Screen {
                     btn -> { st[0]=!st[0]; e.enabled=st[0]; btn.setMessage(Text.literal(st[0]?"§aON":"§cOFF")); }
             ).dimensions(rx, ry, s(36, sc), s(16, sc)).build());
             addDrawableChild(ButtonWidget.builder(Text.literal(e.trackPlaced ? "Posé" : "Miné"),
-                    btn -> { e.trackPlaced=!e.trackPlaced; btn.setMessage(Text.literal(e.trackPlaced?"Posé":"Miné")); }
-            ).dimensions(rx+s(40, sc), ry, s(44, sc), s(16, sc)).build());
+                    btn -> {
+                        e.trackPlaced = !e.trackPlaced;
+                        btn.setMessage(Text.literal(e.trackPlaced ? "Posé" : "Miné"));
+                        OBFUtilities.resetCustomSession(idx);
+                    }
+            ).dimensions(rx+40, ry, 44, 16).build());
             addDrawableChild(ButtonWidget.builder(Text.literal("§cX"),
                     btn -> { cfg.customBlocks.remove(idx); saveAllPositions(); clearAndInit(); }
             ).dimensions(rx+rw-s(20, sc), ry, s(20, sc), s(16, sc)).build());
