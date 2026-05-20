@@ -567,9 +567,7 @@ public class OBFConfigScreen extends Screen {
         ctx.fill(x, y, x+1, y+h, 0xFFFFD54F);
         ctx.fill(x+w-1, y, x+w, y+h, 0xFFFFD54F);
         ctx.fill(x+1, y+1, x+w-1, y+PH(sc), 0xFF1A1A1A);
-        // Titre sans le texte "glisser / ↘ redimensionner"
         ctx.drawTextWithShadow(textRenderer, title, x+s(8, sc), y+s(6, sc), 0xFFFFD54F);
-        // Icône ? rouge en haut à droite
         int size = s(10, sc);
         int[] pos = getHelpIconPos(x, y, w, sc);
         int ix = pos[0], iy = pos[1];
