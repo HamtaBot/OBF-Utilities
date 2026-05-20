@@ -5,7 +5,6 @@
   "client": [
     "BlockPlaceMixin",
     "BlockMineMixin",
-    "KillMixin",
     "StackKillMixin",
     "ChatMixin",
     "JoinMixin",

@@ -28,6 +28,8 @@ public class StackKillMixin {
     private static final Pattern STACK_PATTERN = Pattern.compile("x(\\d+)");
     private static int ticksSinceCleanup = 0;
 
+    private static final double MAX_DISTANCE_SQUARED = 4.0 * 4.0;
+
     @Inject(method = "onEntityTrackerUpdate", at = @At("TAIL"))
     private void onEntityTrackerUpdate(EntityTrackerUpdateS2CPacket packet, CallbackInfo ci) {
         MinecraftClient client = MinecraftClient.getInstance();
@@ -65,7 +67,7 @@ public class StackKillMixin {
 
             if (prevCount != null && newCount < prevCount) {
                 int killed = prevCount - newCount;
-                if (client.player.squaredDistanceTo(entity) < 100.0) {
+                if (client.player.squaredDistanceTo(entity) < MAX_DISTANCE_SQUARED) {
                     OBFUtilities.onMobKilled(killed);
                 }
             }
