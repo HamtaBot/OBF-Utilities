@@ -365,11 +365,10 @@ public class OBFConfigScreen extends Screen {
         addDrawableChild(ButtonWidget.builder(Text.literal("§7📁 Ouvrir le dossier des waypoints"),
                 btn -> {
                     try {
-                        java.io.File configDir = new java.io.File("config").getAbsoluteFile();
-                        String os = System.getProperty("os.name").toLowerCase();
-                        if (os.contains("win")) new ProcessBuilder("explorer.exe", configDir.getAbsolutePath()).start();
-                        else if (os.contains("mac")) Runtime.getRuntime().exec(new String[]{"open", configDir.getAbsolutePath()});
-                        else Runtime.getRuntime().exec(new String[]{"xdg-open", configDir.getAbsolutePath()});
+                        java.io.File configDir = new java.io.File("config").getAbsoluteFile().getCanonicalFile();
+                        if (java.awt.Desktop.isDesktopSupported()) {
+                            java.awt.Desktop.getDesktop().open(configDir);
+                        }
                     } catch (Exception e) { OBFUtilities.LOGGER.error("[OBF] " + e.getMessage()); }
                 }).dimensions(bx, by, bw, BTN(sc)).build());
     }
