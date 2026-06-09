@@ -99,6 +99,7 @@ public class OBFUtilities implements ClientModInitializer {
                     .then(ClientCommandManager.argument("data", com.mojang.brigadier.arguments.StringArgumentType.greedyString())
                             .executes(ctx -> {
                                 String raw = com.mojang.brigadier.arguments.StringArgumentType.getString(ctx, "data");
+                                if (raw == null || raw.length() > 4096) return 0;
                                 importWaypointData(raw);
                                 return 1;
                             })
