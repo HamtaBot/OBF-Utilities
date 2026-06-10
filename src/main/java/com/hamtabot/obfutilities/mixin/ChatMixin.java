@@ -18,9 +18,9 @@ public class ChatMixin {
     private static final Pattern AD_PATTERN = Pattern.compile("\\[(i|item)\\]", Pattern.CASE_INSENSITIVE);
 
     // Patterns pour lire la réponse de /utilitiesstats
-    private static final Pattern MINED_PATTERN  = Pattern.compile("blocs min[ée]s\\s*:\\s*([\\d,\\.]+)", Pattern.CASE_INSENSITIVE);
-    private static final Pattern PLACED_PATTERN = Pattern.compile("blocs pos[ée]s\\s*:\\s*([\\d,\\.]+)", Pattern.CASE_INSENSITIVE);
-    private static final Pattern KILLS_PATTERN  = Pattern.compile("mobs tu[ée]s\\s*:\\s*([\\d,\\.]+)", Pattern.CASE_INSENSITIVE);
+    private static final Pattern MINED_PATTERN  = Pattern.compile("blocs min[ée]s\\s*:\\s*([\\d,\\.]{1,20})", Pattern.CASE_INSENSITIVE);
+    private static final Pattern PLACED_PATTERN = Pattern.compile("blocs pos[ée]s\\s*:\\s*([\\d,\\.]{1,20})", Pattern.CASE_INSENSITIVE);
+    private static final Pattern KILLS_PATTERN  = Pattern.compile("mobs tu[ée]s\\s*:\\s*([\\d,\\.]{1,20})", Pattern.CASE_INSENSITIVE);
 
     @Inject(method = "sendChatMessage", at = @At("HEAD"))
     private void onSendChatMessage(String message, CallbackInfo ci) {
