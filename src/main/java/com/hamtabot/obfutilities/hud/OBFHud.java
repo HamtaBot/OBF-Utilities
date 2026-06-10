@@ -278,8 +278,8 @@ public class OBFHud {
         if (Files.exists(POS_FILE)) {
             try (InputStream in = Files.newInputStream(POS_FILE)) {
                 Properties p = new Properties(); p.load(in);
-                posX=Integer.parseInt(p.getProperty("hud_x","10"));
-                posY=Integer.parseInt(p.getProperty("hud_y","10"));
+                posX=Math.max(0, Math.min(Integer.parseInt(p.getProperty("hud_x","10")), 7680));
+                posY=Math.max(0, Math.min(Integer.parseInt(p.getProperty("hud_y","10")), 4320));
             } catch (Exception e) { posX=10; posY=10; }
         }
     }
@@ -296,7 +296,8 @@ public class OBFHud {
         return h > 0 ? String.format("%dh%02dm%02ds",h,m,sv) : String.format("%dm%02ds",m,sv);
     }
     private String formatBlockName(String id) {
-        String n = id.contains(":") ? id.split(":")[1] : id;
+        if (id == null || id.isEmpty()) return "Unknown";
+        String n = id.contains(":") ? id.split(":", 2)[1] : id;
         StringBuilder sb = new StringBuilder();
         for (String p : n.split("_")) if (!p.isEmpty()) sb.append(Character.toUpperCase(p.charAt(0))).append(p.substring(1)).append(" ");
         return sb.toString().trim();
