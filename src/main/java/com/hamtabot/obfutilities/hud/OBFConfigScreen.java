@@ -366,9 +366,10 @@ public class OBFConfigScreen extends Screen {
                 btn -> {
                     try {
                         java.io.File configDir = new java.io.File("config").getAbsoluteFile().getCanonicalFile();
-                        if (java.awt.Desktop.isDesktopSupported()) {
-                            java.awt.Desktop.getDesktop().open(configDir);
-                        }
+                        String os = System.getProperty("os.name").toLowerCase();
+                        if (os.contains("win")) new ProcessBuilder("explorer.exe", configDir.getAbsolutePath()).start();
+                        else if (os.contains("mac")) new ProcessBuilder("open", configDir.getAbsolutePath()).start();
+                        else new ProcessBuilder("xdg-open", configDir.getAbsolutePath()).start();
                     } catch (Exception e) { OBFUtilities.LOGGER.error("[OBF] " + e.getMessage()); }
                 }).dimensions(bx, by, bw, BTN(sc)).build());
     }
