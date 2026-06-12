@@ -167,17 +167,20 @@ public class OBFUtilities implements ClientModInitializer {
         adAvailable = false;
     }
 
+    private static final long  RATE_WINDOW_MS = 3000;
+    private static final float MAX_RATE       = 20f;
+
     public static void updateRates() {
         long now     = System.currentTimeMillis();
         long elapsed = now - rateWindowStart;
 
-        if (elapsed >= 3000) {
+        if (elapsed >= RATE_WINDOW_MS) {
             float secs = elapsed / 1000f;
-            rateBlocksPlaced = recentBlocksPlaced / secs;
-            rateBlocksMined  = recentBlocksMined  / secs;
-            rateKills        = recentKills        / secs;
+            rateBlocksPlaced = Math.min(recentBlocksPlaced / secs, MAX_RATE);
+            rateBlocksMined  = Math.min(recentBlocksMined  / secs, MAX_RATE);
+            rateKills        = Math.min(recentKills        / secs, MAX_RATE);
             for (int i = 0; i < config.customBlocks.size(); i++) {
-                rateCustom.put(i, recentCustom.getOrDefault(i, 0) / secs);
+                rateCustom.put(i, Math.min(recentCustom.getOrDefault(i, 0) / secs, MAX_RATE));
                 recentCustom.put(i, 0);
             }
             recentBlocksPlaced = 0;
