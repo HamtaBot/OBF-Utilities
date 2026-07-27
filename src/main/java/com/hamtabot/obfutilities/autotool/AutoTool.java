@@ -5,10 +5,20 @@ import com.hamtabot.obfutilities.config.ModConfig;
 import net.minecraft.block.BlockState;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.ClientPlayerEntity;
+import net.minecraft.entity.EquipmentSlot;
+import net.minecraft.entity.Entity;
+import net.minecraft.entity.LivingEntity;
+import net.minecraft.entity.attribute.EntityAttributeModifier;
+import net.minecraft.entity.attribute.EntityAttributes;
 import net.minecraft.item.*;
 import net.minecraft.util.math.BlockPos;
 
+import java.util.function.Predicate;
+
 public class AutoTool {
+
+    // 10 me parait bien si y'a un lag vue que la dura est geré coté serv
+    private static final int LOW_DURABILITY_THRESHOLD = 10;
 
     public static void onBlockLook(BlockPos pos) {
         if (!OBFUtilities.config.autoToolEnabled) return;
@@ -20,18 +30,34 @@ public class AutoTool {
         BlockState state = client.world.getBlockState(pos);
         ClientPlayerEntity player = client.player;
 
-        int bestSlot = findBestSlot(player, state);
-        if (bestSlot != -1 && bestSlot != player.getInventory().selectedSlot) {
-            player.getInventory().selectedSlot = bestSlot;
+        switchTo(player, findBestMiningSlot(player, state));
+    }
+
+    public static void onEntityAttack(Entity target) {
+        if (!OBFUtilities.config.autoToolEnabled) return;
+        if (!(target instanceof LivingEntity)) return;
+
+        MinecraftClient client = MinecraftClient.getInstance();
+        if (client.player == null || client.world == null) return;
+        if (client.currentScreen != null) return;
+
+        ClientPlayerEntity player = client.player;
+
+        switchTo(player, findBestCombatSlot(player));
+    }
+
+    private static void switchTo(ClientPlayerEntity player, int slot) {
+        if (slot != -1 && slot != player.getInventory().selectedSlot) {
+            player.getInventory().selectedSlot = slot;
         }
     }
 
-    private static int findBestSlot(ClientPlayerEntity player, BlockState state) {
+    private static int findBestMiningSlot(ClientPlayerEntity player, BlockState state) {
         ModConfig cfg = OBFUtilities.config;
-        float bestSpeed = 1.0f; // vitesse de la main nue
-        int bestSlot    = -1;
+        float bestSpeed  = 1.0f; // vitesse de la main nue
+        int bestSlot     = -1;
         int selectedSlot = player.getInventory().selectedSlot;
-        boolean selectedIsLow = false;
+        boolean selectedIsWorn = false;
 
         for (int i = 0; i < 9; i++) {
             ItemStack stack = player.getInventory().getStack(i);
@@ -39,14 +65,9 @@ public class AutoTool {
 
             if (!isToolAllowed(stack.getItem(), cfg)) continue;
 
-            // 10 me parait bien si y'a un lag vue que la dura est geré coté serv
-            // TODO: mettre la valeur configurable
-            if (cfg.autoToolSkipLowDurability && stack.isDamageable()) {
-                int remaining = stack.getMaxDamage() - stack.getDamage();
-                if (remaining <= 10) {
-                    if (i == selectedSlot) selectedIsLow = true;
-                    continue;
-                }
+            if (isTooWorn(stack, cfg)) {
+                if (i == selectedSlot) selectedIsWorn = true;
+                continue;
             }
 
             float speed = getEffectiveSpeed(stack, state);
@@ -56,20 +77,64 @@ public class AutoTool {
             }
         }
 
-        if (bestSlot == -1 && selectedIsLow) {
-            int fallbackSlot = -1;
-            for (int i = 0; i < 9; i++) {
-                ItemStack stack = player.getInventory().getStack(i);
-                if (stack.isEmpty()) return i; // main nue
-
-                if (fallbackSlot == -1 && !isToolAllowed(stack.getItem(), cfg)) {
-                    fallbackSlot = i;
-                }
-            }
-            if (fallbackSlot != -1) return fallbackSlot;
+        if (bestSlot == -1 && selectedIsWorn) {
+            return fallbackAwayFromWornTool(player, item -> isToolAllowed(item, cfg));
         }
 
         return bestSlot;
+    }
+
+    private static int findBestCombatSlot(ClientPlayerEntity player) {
+        ModConfig cfg = OBFUtilities.config;
+        if (!cfg.autoToolUseEpee) return -1;
+
+        float bestDamage = -1f;
+        int bestSlot      = -1;
+        int selectedSlot  = player.getInventory().selectedSlot;
+        boolean selectedIsWorn = false;
+
+        for (int i = 0; i < 9; i++) {
+            ItemStack stack = player.getInventory().getStack(i);
+            if (stack.isEmpty()) continue;
+
+            if (!(stack.getItem() instanceof SwordItem)) continue;
+
+            if (isTooWorn(stack, cfg)) {
+                if (i == selectedSlot) selectedIsWorn = true;
+                continue;
+            }
+
+            float damage = getAttackDamage(stack);
+            if (damage > bestDamage) {
+                bestDamage = damage;
+                bestSlot   = i;
+            }
+        }
+
+        if (bestSlot == -1 && selectedIsWorn) {
+            return fallbackAwayFromWornTool(player, item -> item instanceof SwordItem);
+        }
+
+        return bestSlot;
+    }
+
+    private static boolean isTooWorn(ItemStack stack, ModConfig cfg) {
+        if (!cfg.autoToolSkipLowDurability || !stack.isDamageable()) return false;
+        int remaining = stack.getMaxDamage() - stack.getDamage();
+        return remaining <= LOW_DURABILITY_THRESHOLD;
+    }
+
+    private static int fallbackAwayFromWornTool(ClientPlayerEntity player, Predicate<Item> managedByAutoTool) {
+        int fallbackSlot = -1;
+        for (int i = 0; i < 9; i++) {
+            ItemStack stack = player.getInventory().getStack(i);
+            if (stack.isEmpty()) return i;
+
+            if (fallbackSlot == -1 && !managedByAutoTool.test(stack.getItem())) {
+                fallbackSlot = i;
+            }
+        }
+        return fallbackSlot;
     }
 
     private static boolean isToolAllowed(Item item, ModConfig cfg) {
@@ -84,13 +149,19 @@ public class AutoTool {
 
     private static float getEffectiveSpeed(ItemStack stack, BlockState state) {
         Item item = stack.getItem();
-
-        // boost multi épée sinon ca marche pas
         if (item instanceof SwordItem) {
             float speed = stack.getMiningSpeedMultiplier(state);
             return Math.max(speed, 1.5f);
         }
 
         return stack.getMiningSpeedMultiplier(state);
+    }
+
+    private static float getAttackDamage(ItemStack stack) {
+        float damage = 0f;
+        for (EntityAttributeModifier modifier : stack.getAttributeModifiers(EquipmentSlot.MAINHAND).get(EntityAttributes.GENERIC_ATTACK_DAMAGE)) {
+            damage += modifier.getValue();
+        }
+        return damage;
     }
 }
