@@ -30,6 +30,8 @@ public class AutoTool {
         ModConfig cfg = OBFUtilities.config;
         float bestSpeed = 1.0f; // vitesse de la main nue
         int bestSlot    = -1;
+        int selectedSlot = player.getInventory().selectedSlot;
+        boolean selectedIsLow = false;
 
         for (int i = 0; i < 9; i++) {
             ItemStack stack = player.getInventory().getStack(i);
@@ -41,7 +43,10 @@ public class AutoTool {
             // TODO: mettre la valeur configurable
             if (cfg.autoToolSkipLowDurability && stack.isDamageable()) {
                 int remaining = stack.getMaxDamage() - stack.getDamage();
-                if (remaining <= 10) continue;
+                if (remaining <= 10) {
+                    if (i == selectedSlot) selectedIsLow = true;
+                    continue;
+                }
             }
 
             float speed = getEffectiveSpeed(stack, state);
@@ -49,6 +54,19 @@ public class AutoTool {
                 bestSpeed = speed;
                 bestSlot  = i;
             }
+        }
+
+        if (bestSlot == -1 && selectedIsLow) {
+            int fallbackSlot = -1;
+            for (int i = 0; i < 9; i++) {
+                ItemStack stack = player.getInventory().getStack(i);
+                if (stack.isEmpty()) return i; // main nue
+
+                if (fallbackSlot == -1 && !isToolAllowed(stack.getItem(), cfg)) {
+                    fallbackSlot = i;
+                }
+            }
+            if (fallbackSlot != -1) return fallbackSlot;
         }
 
         return bestSlot;
