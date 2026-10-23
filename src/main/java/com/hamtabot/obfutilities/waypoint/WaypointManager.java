@@ -4,12 +4,11 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
 import com.hamtabot.obfutilities.OBFUtilities;
+import com.hamtabot.obfutilities.util.JsonFiles;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.registry.RegistryKey;
 import net.minecraft.world.World;
 
-import java.io.*;
-import java.lang.reflect.Type;
 import java.nio.file.*;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -21,25 +20,15 @@ public class WaypointManager {
     private static List<Waypoint> waypoints = new ArrayList<>();
 
     public static void load() {
-        if (!Files.exists(SAVE_FILE)) return;
-        try (Reader r = Files.newBufferedReader(SAVE_FILE)) {
-            Type type = new TypeToken<List<Waypoint>>(){}.getType();
-            List<Waypoint> loaded = GSON.fromJson(r, type);
-            if (loaded != null) waypoints = loaded;
-        } catch (Exception e) {
-            OBFUtilities.LOGGER.error("[OBF] Erreur chargement waypoints: " + e.getMessage());
+        List<Waypoint> loaded = JsonFiles.read(SAVE_FILE, new TypeToken<List<Waypoint>>(){}.getType(), GSON);
+        if (loaded != null) {
+            loaded.removeIf(Objects::isNull);
+            waypoints = loaded;
         }
     }
 
     public static void save() {
-        try {
-            Files.createDirectories(SAVE_FILE.getParent());
-            try (Writer w = Files.newBufferedWriter(SAVE_FILE)) {
-                GSON.toJson(waypoints, w);
-            }
-        } catch (Exception e) {
-            OBFUtilities.LOGGER.error("[OBF] Erreur sauvegarde waypoints: " + e.getMessage());
-        }
+        JsonFiles.write(SAVE_FILE, waypoints, GSON);
     }
 
     public static void add(Waypoint wp) {

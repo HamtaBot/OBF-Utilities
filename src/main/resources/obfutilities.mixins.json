@@ -14,9 +14,16 @@
     "DoubleDropScreenMixin",
     "SpriteContentsAccessor",
     "HideArmorMixin",
+    "HideHeldItemMixin",
+    "HideHeadItemMixin",
     "NoParticlesMixin",
     "NoChestAnimationMixin",
-    "HideItemFrameMixin"
+    "HideItemFrameMixin",
+    "NoSpawnerAnimationMixin",
+    "NoShulkerAnimationMixin",
+    "CommandSuggestionsMixin",
+    "ClientBrandMixin",
+    "WarpKeyMixin"
   ],
   "injectors": {
     "defaultRequire": 1

@@ -2,13 +2,14 @@ package com.hamtabot.obfutilities.config;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import com.hamtabot.obfutilities.OBFUtilities;
 import com.hamtabot.obfutilities.timer.TimerEntry;
+import com.hamtabot.obfutilities.util.JsonFiles;
 
-import java.io.*;
-import java.nio.file.*;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 public class ModConfig {
 
@@ -24,10 +25,9 @@ public class ModConfig {
     public boolean keepSession  = false;
     public boolean keepAfkTimer = false;
 
-    public boolean afkCustomZone = false;
-    public String  afkDimension  = "minecraft:overworld";
-    public int afkX1 = -264, afkY1 = 69, afkZ1 = 230;
-    public int afkX2 = -247, afkY2 = 77, afkZ2 = 248;
+    public String afkDimension = "minecraft:overworld";
+    public int[]  afkCorner1   = null;
+    public int[]  afkCorner2   = null;
 
     public boolean doubleDropEnabled = false;
 
@@ -49,6 +49,12 @@ public class ModConfig {
     public boolean disableParticles      = false;
     public boolean disableChestAnimation = false;
     public boolean hideItemFrames        = false;
+    public boolean disableSpawnerAnimation = false;
+
+    public List<WarpBind> warps = new ArrayList<>();
+
+    public boolean storageDepositEnabled  = true;
+    public boolean storageWithdrawEnabled = true;
 
     public boolean blockShadeEnabled = true;
     public List<BlockShadeEntry> blockShades = new ArrayList<>();
@@ -95,6 +101,14 @@ public class ModConfig {
         }
     }
 
+    public static class WarpBind {
+        public String name = "";
+        public int    key  = -1;
+
+        public WarpBind() {}
+        public WarpBind(String name) { this.name = name; }
+    }
+
     public static class BlockShadeEntry {
         public String  blockId = "minecraft:stone";
         public boolean enabled = true;
@@ -104,23 +118,25 @@ public class ModConfig {
     }
 
     public static ModConfig load() {
-        if (Files.exists(CONFIG_FILE)) {
-            try (Reader r = Files.newBufferedReader(CONFIG_FILE)) {
-                ModConfig cfg = GSON.fromJson(r, ModConfig.class);
-                if (cfg.customBlocks == null) cfg.customBlocks = new ArrayList<>();
-                if (cfg.blockShades == null) cfg.blockShades = new ArrayList<>();
-                if (cfg.adMessage == null) cfg.adMessage = "";
-                if (cfg.timers == null) cfg.timers = new ArrayList<>();
-                if (cfg.afkDimension == null) cfg.afkDimension = "minecraft:overworld";
-                cfg.scaleHud = clampScale(cfg.scaleHud);
-                return cfg;
-            } catch (Exception e) {
-                OBFUtilities.LOGGER.error("[OBF] Erreur chargement config: " + e.getMessage());
-            }
-        }
-        ModConfig cfg = new ModConfig();
+        ModConfig cfg = JsonFiles.read(CONFIG_FILE, ModConfig.class, GSON);
+        if (cfg == null) cfg = new ModConfig();
+        cfg.sanitize();
         cfg.save();
         return cfg;
+    }
+
+    private void sanitize() {
+        if (customBlocks == null) customBlocks = new ArrayList<>();
+        if (blockShades == null) blockShades = new ArrayList<>();
+        if (timers == null) timers = new ArrayList<>();
+        if (warps == null) warps = new ArrayList<>();
+        customBlocks.removeIf(e -> e == null || e.blockId == null);
+        blockShades.removeIf(e -> e == null || e.blockId == null);
+        timers.removeIf(Objects::isNull);
+        warps.removeIf(w -> w == null || w.name == null || w.name.isBlank());
+        if (adMessage == null) adMessage = "";
+        if (afkDimension == null) afkDimension = "minecraft:overworld";
+        scaleHud = clampScale(scaleHud);
     }
 
     public static float clampScale(float v) {
@@ -128,13 +144,6 @@ public class ModConfig {
     }
 
     public void save() {
-        try {
-            Files.createDirectories(CONFIG_FILE.getParent());
-            try (Writer w = Files.newBufferedWriter(CONFIG_FILE)) {
-                GSON.toJson(this, w);
-            }
-        } catch (Exception e) {
-            OBFUtilities.LOGGER.error("[OBF] Erreur sauvegarde config: " + e.getMessage());
-        }
+        JsonFiles.write(CONFIG_FILE, this, GSON);
     }
 }

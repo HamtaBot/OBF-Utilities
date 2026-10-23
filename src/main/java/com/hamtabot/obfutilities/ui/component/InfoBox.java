@@ -30,8 +30,7 @@ public class InfoBox extends Component {
     @Override
     public void render(DrawContext ctx, int mouseX, int mouseY) {
         int h = getHeight();
-        Draw.round(ctx, x, y, width, h, (color & 0x00FFFFFF) | 0x1A000000);
-        ctx.fill(x, y + 1, x + 2, y + h - 1, color);
+        Draw.tintedCard(ctx, x, y, width, h, color);
         Draw.drawWrapped(ctx, tr(), lines(), x + Theme.ROW_PAD + 3, y + Theme.ROW_PAD, Draw.lerpColor(color, Theme.TEXT, 0.55f));
     }
 }

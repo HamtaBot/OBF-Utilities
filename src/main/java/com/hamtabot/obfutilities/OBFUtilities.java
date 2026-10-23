@@ -13,8 +13,10 @@ import com.hamtabot.obfutilities.stats.ServerStats;
 import com.hamtabot.obfutilities.stats.SessionStats;
 import com.hamtabot.obfutilities.stats.SessionStore;
 import com.hamtabot.obfutilities.stats.StatsReader;
+import com.hamtabot.obfutilities.storage.StorageUnit;
 import com.hamtabot.obfutilities.timer.Timers;
 import com.hamtabot.obfutilities.ui.HudEditScreen;
+import com.hamtabot.obfutilities.warp.WarpMacros;
 import com.hamtabot.obfutilities.waypoint.WaypointCommand;
 import com.hamtabot.obfutilities.waypoint.WaypointManager;
 import com.hamtabot.obfutilities.waypoint.WaypointRenderer;
@@ -42,6 +44,7 @@ public class OBFUtilities implements ClientModInitializer {
         AfkTimer.load();
 
         Keybinds.register();
+        StorageUnit.register();
         WaypointManager.load();
         WaypointCommand.register();
         WaypointRenderer.register();
@@ -68,6 +71,8 @@ public class OBFUtilities implements ClientModInitializer {
             StatsReader.tick(client);
             ServerStats.tick(client);
             Keybinds.tick(client);
+            WarpMacros.tick(client);
+            StorageUnit.tick(client);
         });
     }
 

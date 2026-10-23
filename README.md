@@ -27,8 +27,8 @@ Les totaux serveur sont récupérés automatiquement à la connexion, sans pollu
 - Message à l'écran quand tu peux renvoyer ta pub
 
 ## 💤 AFK Timer
-- Compte le temps passé dans la zone AFK du spawn : il démarre quand tu y entres et s'arrête quand tu en sors
-- Possibilité de définir **ta propre zone** : place-toi sur deux coins opposés et clique sur « Ma position »
+- Compte le temps passé dans ta zone AFK : il démarre quand tu y entres et s'arrête quand tu en sors
+- **Tu définis toi-même la zone** : place-toi sur deux coins opposés et clique sur « Ma position »
 - Bouton de réinitialisation
 - Option pour garder le temps après un redémarrage du jeu
 
@@ -45,10 +45,23 @@ Prend automatiquement le meilleur outil de ta hotbar selon le bloc visé, et ton
 - Très réactif, pensé pour le OneBlock
 
 ## 🚀 Optimisations
-- **Cacher l'armure** des autres joueurs (la tienne reste visible)
+- **Cacher l'équipement** des autres joueurs : armure, objets en main et en seconde main, et ce qu'ils portent sur la tête (le tien reste visible)
 - **Cacher les cadres** sans cacher l'objet ou la carte qu'ils contiennent
 - **Désactiver toutes les particules**
-- **Couper l'animation d'ouverture** des coffres et coffres de l'Ender
+- **Couper l'animation d'ouverture** des coffres, coffres de l'Ender et shulker boxes
+- **Cacher le mob qui tourne** dans les spawners
+
+## 🌀 Macro Warps
+- À chaque connexion, le mod récupère la liste des `/warp` du serveur
+- Assigne une touche du clavier à n'importe quel warp : un appui et tu es téléporté
+- Aucune touche assignée par défaut
+- Les warps supprimés du serveur disparaissent de la liste avec leur touche, les autres gardent la leur après un redémarrage
+
+## 📥 Unité stockage
+- Bouton **Tout déposer** : dépose dans l'unité tous les objets de ton inventaire identiques au bloc qu'elle contient
+- Bouton **Tout prendre** : prend des stacks jusqu'à remplir ton inventaire
+- Un clic par tick : l'inventaire se remplit ou se vide en quelques secondes
+- Chaque bouton s'active ou se désactive dans la config
 
 ## 🌑 Blocs sombres
 - Applique une texture sombre aux blocs de ton choix, plus reposante pour les yeux
@@ -125,7 +138,7 @@ Le `.jar` se trouve ensuite dans `build/libs/`.
 
 | Fichier | Contenu |
 |---|---|
-| `config/obfutilities.json` | Configuration du mod (options, blocs suivis, timers, zone AFK...) |
+| `config/obfutilities.json` | Configuration du mod (options, blocs suivis, timers, zone AFK, touches des warps...) |
 | `config/obfutilities_waypoints.json` | Waypoints |
 | `config/obfutilities_session.json` | Session sauvegardée (si « Garder la session » est activé) |
 | `config/obfutilities_afk.json` | Temps AFK sauvegardé (si l'option est activée) |
