@@ -111,7 +111,7 @@ public final class WarpMacros {
     }
 
     public static void onKeyPressed(MinecraftClient client, int key) {
-        if (client.player == null) return;
+        if (client.player == null || key < 0) return;
         for (ModConfig.WarpBind w : OBFUtilities.config.warps) {
             if (w.key == key) {
                 client.player.networkHandler.sendChatCommand("warp " + w.name);
