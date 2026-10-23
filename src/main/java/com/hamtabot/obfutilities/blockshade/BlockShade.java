@@ -12,6 +12,7 @@ import net.minecraft.client.texture.MipmapHelper;
 import net.minecraft.client.texture.NativeImage;
 import net.minecraft.client.texture.Sprite;
 import net.minecraft.client.texture.SpriteAtlasTexture;
+import net.minecraft.screen.PlayerScreenHandler;
 import net.minecraft.registry.Registries;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.BlockPos;
@@ -162,7 +163,7 @@ public final class BlockShade {
 
     private static SpriteAtlasTexture atlas(MinecraftClient client) {
         if (client.getBakedModelManager() == null) return null;
-        try { return client.getBakedModelManager().getAtlas(SpriteAtlasTexture.BLOCK_ATLAS_TEXTURE); }
+        try { return client.getBakedModelManager().getAtlas(PlayerScreenHandler.BLOCK_ATLAS_TEXTURE); }
         catch (Exception e) { return null; }
     }
 }
