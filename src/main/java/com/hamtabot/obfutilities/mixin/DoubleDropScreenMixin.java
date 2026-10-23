@@ -1,6 +1,6 @@
 package com.hamtabot.obfutilities.mixin;
 
-import com.hamtabot.obfutilities.doubledrop.DoubleDrop;
+import com.hamtabot.obfutilities.input.DoubleDrop;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.ingame.HandledScreen;
 import net.minecraft.screen.slot.Slot;

@@ -17,7 +17,6 @@ import java.util.function.Predicate;
 
 public class AutoTool {
 
-    // 10 me parait bien si y'a un lag vue que la dura est geré coté serv
     private static final int LOW_DURABILITY_THRESHOLD = 10;
 
     public static void onBlockLook(BlockPos pos) {
@@ -54,7 +53,7 @@ public class AutoTool {
 
     private static int findBestMiningSlot(ClientPlayerEntity player, BlockState state) {
         ModConfig cfg = OBFUtilities.config;
-        float bestSpeed  = 1.0f; // vitesse de la main nue
+        float bestSpeed  = 1.0f;
         int bestSlot     = -1;
         int selectedSlot = player.getInventory().selectedSlot;
         boolean selectedIsWorn = false;

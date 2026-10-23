@@ -1,6 +1,6 @@
 package com.hamtabot.obfutilities.mixin;
 
-import com.hamtabot.obfutilities.OBFUtilities;
+import com.hamtabot.obfutilities.stats.SessionStats;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.client.network.ClientPlayerInteractionManager;
@@ -28,7 +28,7 @@ public class BlockMineMixin {
     @Inject(method = "breakBlock", at = @At("RETURN"))
     private void onBreakBlockReturn(BlockPos pos, CallbackInfoReturnable<Boolean> cir) {
         if (!cir.getReturnValue() || pendingBlockId == null) return;
-        OBFUtilities.onBlockMined(pendingBlockId);
+        SessionStats.onBlockMined(pendingBlockId);
         pendingBlockId = null;
     }
 }

@@ -1,6 +1,6 @@
 package com.hamtabot.obfutilities.mixin;
 
-import com.hamtabot.obfutilities.OBFUtilities;
+import com.hamtabot.obfutilities.stats.SessionStats;
 import net.minecraft.block.Block;
 import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.client.network.ClientPlayerInteractionManager;
@@ -29,7 +29,7 @@ public class BlockPlaceMixin {
             Block block = blockItem.getBlock();
             String blockId = Registries.BLOCK.getId(block).toString();
             String itemId  = Registries.ITEM.getId(stack.getItem()).toString();
-            OBFUtilities.onBlockPlaced(blockId, itemId);
+            SessionStats.onBlockPlaced(blockId, itemId);
         }
     }
 }

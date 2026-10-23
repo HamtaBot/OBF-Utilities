@@ -3,6 +3,7 @@ package com.hamtabot.obfutilities.config;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.hamtabot.obfutilities.OBFUtilities;
+import com.hamtabot.obfutilities.timer.TimerEntry;
 
 import java.io.*;
 import java.nio.file.*;
@@ -19,6 +20,8 @@ public class ModConfig {
     public boolean showMobsKilled   = true;
     public boolean showAdTimer      = true;
 
+    public boolean keepSession = false;
+
     public boolean doubleDropEnabled = false;
 
     public List<CustomBlockEntry> customBlocks = new ArrayList<>();
@@ -33,35 +36,20 @@ public class ModConfig {
     public boolean autoToolUseCisaille= true;
     public boolean autoToolUseEpee    = true;
 
-    public boolean fullBrightEnabled   = false;
+    public boolean fullBrightEnabled  = false;
+
+    public boolean blockShadeEnabled = true;
+    public List<BlockShadeEntry> blockShades = new ArrayList<>();
+
     public boolean attackRemapEnabled = false;
     public int     attackRemapKey     = org.lwjgl.glfw.GLFW.GLFW_KEY_R;
-    public int     cfgAttackRemapX    = -1;
-    public int     cfgAttackRemapY    = 20;
 
     public boolean useRemapEnabled = false;
     public int     useRemapKey     = org.lwjgl.glfw.GLFW.GLFW_KEY_F;
-    public int     cfgUseRemapX    = -1;
-    public int     cfgUseRemapY    = 20;
 
     public boolean waypointsEnabled = true;
-    public int cfgWpX = -1, cfgWpY = 20;
 
-    public int cfgLeftX = -1, cfgLeftY = 20;
-    public int cfgRightX = -1, cfgRightY = 20;
-    public int cfgToolX = -1, cfgToolY = 20;
-    public int cfgBrightX = -1, cfgBrightY = 20;
-    public int cfgDebugX = -1, cfgDebugY = 20;
-
-    public float scaleLeft   = 1.0f;
-    public float scaleRight  = 1.0f;
-    public float scaleTool   = 1.0f;
-    public float scaleBright = 1.0f;
-    public float scaleDebug  = 1.0f;
-    public float scaleWp     = 1.0f;
-    public float scaleAr     = 1.0f;
-    public float scaleUr     = 1.0f; // NOUVEAU
-    public float scaleHud    = 1.0f;
+    public float scaleHud = 1.0f;
 
     public int serverTotalPlaced = -1;
     public int serverTotalMined  = -1;
@@ -78,6 +66,10 @@ public class ModConfig {
     public int debugRamY           = 140;
 
     public long adCooldownMs = 15 * 60 * 1000L;
+    public String  adMessage      = "";
+    public boolean adTitleEnabled = true;
+
+    public List<TimerEntry> timers = new ArrayList<>();
 
     public static class CustomBlockEntry {
         public String  blockId      = "minecraft:stone";
@@ -91,20 +83,23 @@ public class ModConfig {
         }
     }
 
+    public static class BlockShadeEntry {
+        public String  blockId = "minecraft:stone";
+        public boolean enabled = true;
+
+        public BlockShadeEntry() {}
+        public BlockShadeEntry(String blockId) { this.blockId = blockId; }
+    }
+
     public static ModConfig load() {
         if (Files.exists(CONFIG_FILE)) {
             try (Reader r = Files.newBufferedReader(CONFIG_FILE)) {
                 ModConfig cfg = GSON.fromJson(r, ModConfig.class);
                 if (cfg.customBlocks == null) cfg.customBlocks = new ArrayList<>();
-                cfg.scaleLeft   = clampScale(cfg.scaleLeft);
-                cfg.scaleRight  = clampScale(cfg.scaleRight);
-                cfg.scaleTool   = clampScale(cfg.scaleTool);
-                cfg.scaleBright = clampScale(cfg.scaleBright);
-                cfg.scaleDebug  = clampScale(cfg.scaleDebug);
-                cfg.scaleWp     = clampScale(cfg.scaleWp);
-                cfg.scaleAr     = clampScale(cfg.scaleAr);
-                cfg.scaleUr     = clampScale(cfg.scaleUr);
-                cfg.scaleHud    = clampScale(cfg.scaleHud);
+                if (cfg.blockShades == null) cfg.blockShades = new ArrayList<>();
+                if (cfg.adMessage == null) cfg.adMessage = "";
+                if (cfg.timers == null) cfg.timers = new ArrayList<>();
+                cfg.scaleHud = clampScale(cfg.scaleHud);
                 return cfg;
             } catch (Exception e) {
                 OBFUtilities.LOGGER.error("[OBF] Erreur chargement config: " + e.getMessage());

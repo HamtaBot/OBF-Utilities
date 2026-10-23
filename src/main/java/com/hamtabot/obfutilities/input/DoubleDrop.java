@@ -1,4 +1,4 @@
-package com.hamtabot.obfutilities.doubledrop;
+package com.hamtabot.obfutilities.input;
 
 import com.hamtabot.obfutilities.OBFUtilities;
 import net.minecraft.client.MinecraftClient;
@@ -11,7 +11,6 @@ public class DoubleDrop {
     private static long   lastPressTime = 0;
     private static String lastTarget    = null;
 
-    // Renvoie true si le drop doit avoir lieu (2e appui sur la même cible dans la fenêtre)
     public static boolean allowDrop(String target) {
         if (!OBFUtilities.config.doubleDropEnabled) return true;
 

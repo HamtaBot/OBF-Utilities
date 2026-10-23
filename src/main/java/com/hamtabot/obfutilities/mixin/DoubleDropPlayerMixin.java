@@ -1,6 +1,6 @@
 package com.hamtabot.obfutilities.mixin;
 
-import com.hamtabot.obfutilities.doubledrop.DoubleDrop;
+import com.hamtabot.obfutilities.input.DoubleDrop;
 import net.minecraft.client.network.ClientPlayerEntity;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;

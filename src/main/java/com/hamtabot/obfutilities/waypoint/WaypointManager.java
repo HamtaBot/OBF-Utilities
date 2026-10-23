@@ -47,10 +47,18 @@ public class WaypointManager {
         save();
     }
 
-    public static void remove(int index) {
-        if (index >= 0 && index < waypoints.size()) {
-            waypoints.remove(index);
-            save();
+    public static void remove(Waypoint wp) {
+        if (waypoints.remove(wp)) save();
+    }
+
+    public static void importShareData(String raw) {
+        String data;
+        if (raw.startsWith("OBF-WP:"))       data = raw.substring(7);
+        else if (raw.startsWith("OBF-WPS:")) data = raw.substring(8);
+        else return;
+        for (String part : data.split(";")) {
+            Waypoint wp = Waypoint.fromShareString(part);
+            if (wp != null) { add(wp); OBFUtilities.LOGGER.info("[OBF] Waypoint importé: " + wp.name); }
         }
     }
 
