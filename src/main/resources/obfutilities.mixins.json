@@ -10,7 +10,9 @@
     "JoinMixin",
     "AutoToolMixin",
     "LightTextureMixin",
-    "WaypointChatMixin"
+    "WaypointChatMixin",
+    "DoubleDropPlayerMixin",
+    "DoubleDropScreenMixin"
   ],
   "injectors": {
     "defaultRequire": 1

@@ -19,6 +19,8 @@ public class ModConfig {
     public boolean showMobsKilled   = true;
     public boolean showAdTimer      = true;
 
+    public boolean doubleDropEnabled = false;
+
     public List<CustomBlockEntry> customBlocks = new ArrayList<>();
 
     public boolean autoToolEnabled           = false;

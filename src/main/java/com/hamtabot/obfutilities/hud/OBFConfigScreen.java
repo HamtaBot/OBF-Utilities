@@ -219,6 +219,8 @@ public class OBFConfigScreen extends Screen {
         addToggleButton(bx, by, bw, sc, "Mobs tués",   cfg.showMobsKilled,   v -> cfg.showMobsKilled   = v); by += ROW(sc);
         addToggleButton(bx, by, bw, sc, "Pub timer",   cfg.showAdTimer,      v -> cfg.showAdTimer      = v); by += ROW(sc);
         by += s(4, sc);
+        addToggleButton(bx, by, bw, sc, "Double appui pour drop", cfg.doubleDropEnabled, v -> cfg.doubleDropEnabled = v); by += ROW(sc);
+        by += s(4, sc);
 
         addDrawableChild(ButtonWidget.builder(Text.literal("Réinitialiser la session"),
                 btn -> OBFUtilities.resetSession()).dimensions(bx, by, bw, BTN(sc)).build());
@@ -907,7 +909,7 @@ public class OBFConfigScreen extends Screen {
         return sb.toString().trim();
     }
 
-    private int computeLeftH()  { float sc=cfg.scaleLeft;   return PH(sc)+PAD(sc)+s(14,sc)+ROW(sc)*4+s(4,sc)+BTN(sc)+s(6,sc)+BTN(sc)+s(18,sc); }
+    private int computeLeftH()  { float sc=cfg.scaleLeft;   return PH(sc)+PAD(sc)+s(14,sc)+ROW(sc)*4+s(4,sc)+ROW(sc)+s(4,sc)+BTN(sc)+s(6,sc)+BTN(sc)+s(18,sc); }
     private int computeRightH() { float sc=cfg.scaleRight;  int h=PH(sc)+PAD(sc)+s(14,sc)+cfg.customBlocks.size()*s(20,sc)+BTN(sc)+s(8,sc); if(addingMode) h+=BTN(sc)+s(6,sc)+s(16,sc)+s(6,sc)+BLOCK_LIST_VISIBLE*s(18,sc)+s(6,sc); return h+s(6,sc); }
     private int computeToolH()  { float sc=cfg.scaleTool;   return PH(sc)+PAD(sc)+s(14,sc)+BTN(sc)+s(6,sc)+BTN(sc)+s(10,sc)+s(14,sc)+s(20,sc)+s(20,sc)+s(16,sc)+s(14,sc); }
     private int computeBrightH(){ float sc=cfg.scaleBright; return PH(sc)+PAD(sc)+s(14,sc)+BTN(sc)+PAD(sc); }
