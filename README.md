@@ -3,7 +3,7 @@
 > Développé par **OneBlockFrance**
 > 🔗 GitHub : https://github.com/HamtaBot/OBF-Utilities
 
-Tout se règle depuis le menu de config (`O` en jeu).
+Tout se règle depuis le menu de config (`O` en jeu). Le bouton « Organiser », en bas du menu, permet de ranger les catégories dans l'ordre de ton choix.
 
 ---
 

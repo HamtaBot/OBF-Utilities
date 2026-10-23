@@ -58,7 +58,7 @@ public class ConfigScreen extends Screen {
     }
 
     private static final int MAX_W = 480, MAX_H = 340;
-    private static final int HEADER_H = 24, NAV_ITEM_H = 20, NAV_ICON = 12, NAV_HINT_H = 18;
+    private static final int HEADER_H = 24, NAV_ITEM_H = 20, NAV_ICON = 12, NAV_BTN_H = 16, NAV_ARROW = 10;
     private static final int LOGO_SIZE = 18, TITLE_X = 10 + LOGO_SIZE + 6;
     private static final String VERSION = "v" + FabricLoader.getInstance().getModContainer(OBFUtilities.MOD_ID)
             .map(m -> m.getMetadata().getVersion().getFriendlyString()).orElse("?");
@@ -72,7 +72,7 @@ public class ConfigScreen extends Screen {
     private final ScrollList navList = new ScrollList();
     private final List<NavItem> navItems = new ArrayList<>();
     private Page hoveredNav;
-    private boolean showNavHint;
+    private boolean organizing;
     private int warpsVersion = WarpMacros.version();
     private long adSentAt;
 
@@ -109,7 +109,7 @@ public class ConfigScreen extends Screen {
         page = p;
         lastPage = p;
         list.setComponents(buildPage(p), false);
-        navList.reveal(navItems.get(p.ordinal()));
+        navList.reveal(navItemFor(p));
     }
 
     private void refresh() { list.setComponents(buildPage(page), true); }
@@ -428,15 +428,64 @@ public class ConfigScreen extends Screen {
         }
     }
 
+    private List<Page> orderedPages() {
+        List<Page> pages = new ArrayList<>();
+        for (String name : cfg.pageOrder) {
+            for (Page p : Page.values()) {
+                if (p.name().equals(name) && !pages.contains(p)) pages.add(p);
+            }
+        }
+        for (Page p : Page.values()) {
+            if (!pages.contains(p)) pages.add(p);
+        }
+        return pages;
+    }
+
+    private void movePage(Page p, int dir) {
+        List<Page> pages = orderedPages();
+        int i = pages.indexOf(p), j = i + dir;
+        if (j < 0 || j >= pages.size()) return;
+        pages.set(i, pages.get(j));
+        pages.set(j, p);
+        cfg.pageOrder = new ArrayList<>(pages.stream().map(Page::name).toList());
+        cfg.save();
+        layoutNav();
+        navList.reveal(navItemFor(p));
+    }
+
+    private void resetPageOrder() {
+        cfg.pageOrder.clear();
+        cfg.save();
+        layoutNav();
+    }
+
+    private NavItem navItemFor(Page p) {
+        for (NavItem item : navItems) if (item.target == p) return item;
+        return navItems.get(0);
+    }
+
+    private int navFooterH() {
+        if (compactNav) return 0;
+        return organizing ? 2 * (NAV_BTN_H + 4) + 2 : NAV_BTN_H + 6;
+    }
+
     private void layoutNav() {
         navItems.clear();
-        for (Page p : Page.values()) navItems.add(new NavItem(p));
+        for (Page p : orderedPages()) navItems.add(new NavItem(p));
         int top = winY + HEADER_H + 6, available = winH - HEADER_H - 12;
-        int contentH = navItems.size() * (NAV_ITEM_H + Theme.ROW_GAP) - Theme.ROW_GAP;
-        showNavHint = !compactNav && contentH + NAV_HINT_H <= available;
-        navList.setBounds(winX + 4, top, navW - 4, showNavHint ? available - NAV_HINT_H : available);
+        navList.setBounds(winX + 4, top, navW - 4, available - navFooterH());
         navList.setComponents(new ArrayList<>(navItems), true);
-        navList.reveal(navItems.get(page.ordinal()));
+        navList.reveal(navItemFor(page));
+    }
+
+    private int[][] navFooterButtons() {
+        if (compactNav) return new int[0][];
+        int x = winX + 6, w = navW - 12, bottom = winY + winH - 6;
+        if (!organizing) return new int[][]{ { x, bottom - NAV_BTN_H, w, NAV_BTN_H } };
+        return new int[][]{
+                { x, bottom - 2 * NAV_BTN_H - 4, w, NAV_BTN_H },
+                { x, bottom - NAV_BTN_H, w, NAV_BTN_H }
+        };
     }
 
     private void renderNav(DrawContext ctx, int mouseX, int mouseY) {
@@ -447,9 +496,17 @@ public class ConfigScreen extends Screen {
         hoveredNav = null;
         navList.render(ctx, mouseX, mouseY);
 
-        if (showNavHint) {
-            String hint = Draw.ellipsize(textRenderer, "Échap pour fermer", navW - 14);
-            ctx.drawText(textRenderer, hint, winX + 8, winY + winH - 14, Theme.TEXT_DIM, false);
+        int[][] buttons = navFooterButtons();
+        for (int i = 0; i < buttons.length; i++) {
+            int[] b = buttons[i];
+            boolean hov = Draw.inside(mouseX, mouseY, b[0], b[1], b[2], b[3]);
+            if (!organizing) {
+                Draw.button(ctx, textRenderer, b[0], b[1], b[2], b[3], "Organiser", Draw.ButtonStyle.SECONDARY, hov, true);
+            } else if (i == 0) {
+                Draw.button(ctx, textRenderer, b[0], b[1], b[2], b[3], "Ordre par défaut", Draw.ButtonStyle.SECONDARY, hov, !cfg.pageOrder.isEmpty());
+            } else {
+                Draw.button(ctx, textRenderer, b[0], b[1], b[2], b[3], "Terminé", Draw.ButtonStyle.PRIMARY, hov, true);
+            }
         }
     }
 
@@ -478,13 +535,45 @@ public class ConfigScreen extends Screen {
                 return;
             }
             Draw.item(ctx, target.icon, x + 6, iconY, NAV_ICON);
-            ctx.drawText(tr(), Draw.ellipsize(tr(), target.title, width - 26), x + 22, y + (NAV_ITEM_H - 8) / 2 + 1,
+            int titleW = width - 26 - (organizing ? 2 * NAV_ARROW + 4 : 0);
+            ctx.drawText(tr(), Draw.ellipsize(tr(), target.title, titleW), x + 22, y + (NAV_ITEM_H - 8) / 2 + 1,
                     selected || hov ? Theme.TEXT : Theme.TEXT_MUTED, false);
+            if (organizing) {
+                renderArrow(ctx, -1, mouseX, mouseY);
+                renderArrow(ctx, 1, mouseX, mouseY);
+            }
+        }
+
+        private int arrowX(int dir) { return x + width - 2 - (dir < 0 ? 2 : 1) * NAV_ARROW; }
+
+        private int arrowY() { return y + (NAV_ITEM_H - NAV_ARROW) / 2; }
+
+        private boolean canMove(int dir) {
+            int i = navItems.indexOf(this) + dir;
+            return i >= 0 && i < navItems.size();
+        }
+
+        private void renderArrow(DrawContext ctx, int dir, int mouseX, int mouseY) {
+            int ax = arrowX(dir), ay = arrowY();
+            boolean enabled = canMove(dir);
+            boolean hov = enabled && Draw.inside(mouseX, mouseY, ax, ay, NAV_ARROW, NAV_ARROW);
+            if (hov) Draw.round(ctx, ax, ay, NAV_ARROW, NAV_ARROW, Theme.ACCENT_SURFACE);
+            Draw.arrowIcon(ctx, ax + NAV_ARROW / 2, ay + NAV_ARROW / 2, dir < 0,
+                    !enabled ? Theme.TEXT_DIM : hov ? Theme.ACCENT : Theme.TEXT);
         }
 
         @Override
         public boolean mouseClicked(double mouseX, double mouseY, int button) {
             if (button != 0 || !isHovered(mouseX, mouseY)) return false;
+            if (organizing) {
+                for (int dir : new int[]{ -1, 1 }) {
+                    if (canMove(dir) && Draw.inside(mouseX, mouseY, arrowX(dir), arrowY(), NAV_ARROW, NAV_ARROW)) {
+                        Draw.playClick();
+                        movePage(target, dir);
+                        return true;
+                    }
+                }
+            }
             showPage(target);
             return true;
         }
@@ -509,6 +598,20 @@ public class ConfigScreen extends Screen {
             if (Draw.inside(mouseX, mouseY, c[0], c[1], Theme.CLOSE_SIZE, Theme.CLOSE_SIZE)) { close(); return true; }
             int[] e = hudButtonBounds();
             if (e != null && Draw.inside(mouseX, mouseY, e[0], e[1], e[2], e[3])) { openHudEditor(); return true; }
+            int[][] buttons = navFooterButtons();
+            for (int i = 0; i < buttons.length; i++) {
+                int[] b = buttons[i];
+                if (!Draw.inside(mouseX, mouseY, b[0], b[1], b[2], b[3])) continue;
+                if (organizing && i == 0) {
+                    if (cfg.pageOrder.isEmpty()) return true;
+                    resetPageOrder();
+                } else {
+                    organizing = !organizing;
+                    layoutNav();
+                }
+                Draw.playClick();
+                return true;
+            }
         }
         if (navList.mouseClicked(mouseX, mouseY, button)) return true;
         if (list.mouseClicked(mouseX, mouseY, button)) return true;
@@ -541,9 +644,9 @@ public class ConfigScreen extends Screen {
         if (list.isCapturingKeys()) return list.keyPressed(keyCode);
         if (Keybinds.openConfig.matchesKey(keyCode, scanCode)) { close(); return true; }
         if (keyCode == GLFW.GLFW_KEY_TAB) {
-            Page[] pages = Page.values();
+            List<Page> pages = orderedPages();
             int dir = (modifiers & GLFW.GLFW_MOD_SHIFT) != 0 ? -1 : 1;
-            showPage(pages[(page.ordinal() + dir + pages.length) % pages.length]);
+            showPage(pages.get((pages.indexOf(page) + dir + pages.size()) % pages.size()));
             return true;
         }
         return super.keyPressed(keyCode, scanCode, modifiers);

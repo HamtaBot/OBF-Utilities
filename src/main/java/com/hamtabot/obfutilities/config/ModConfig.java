@@ -53,6 +53,8 @@ public class ModConfig {
 
     public List<WarpBind> warps = new ArrayList<>();
 
+    public List<String> pageOrder = new ArrayList<>();
+
     public boolean storageDepositEnabled  = true;
     public boolean storageWithdrawEnabled = true;
 
@@ -130,6 +132,8 @@ public class ModConfig {
         if (blockShades == null) blockShades = new ArrayList<>();
         if (timers == null) timers = new ArrayList<>();
         if (warps == null) warps = new ArrayList<>();
+        if (pageOrder == null) pageOrder = new ArrayList<>();
+        pageOrder.removeIf(Objects::isNull);
         customBlocks.removeIf(e -> e == null || e.blockId == null);
         blockShades.removeIf(e -> e == null || e.blockId == null);
         timers.removeIf(Objects::isNull);
