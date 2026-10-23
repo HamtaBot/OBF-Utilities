@@ -19,8 +19,15 @@ public class ModConfig {
     public boolean showBlocksMined  = true;
     public boolean showMobsKilled   = true;
     public boolean showAdTimer      = true;
+    public boolean showAfkTimer     = true;
 
-    public boolean keepSession = false;
+    public boolean keepSession  = false;
+    public boolean keepAfkTimer = false;
+
+    public boolean afkCustomZone = false;
+    public String  afkDimension  = "minecraft:overworld";
+    public int afkX1 = -264, afkY1 = 69, afkZ1 = 230;
+    public int afkX2 = -247, afkY2 = 77, afkZ2 = 248;
 
     public boolean doubleDropEnabled = false;
 
@@ -37,6 +44,11 @@ public class ModConfig {
     public boolean autoToolUseEpee    = true;
 
     public boolean fullBrightEnabled  = false;
+
+    public boolean hideOtherArmor        = false;
+    public boolean disableParticles      = false;
+    public boolean disableChestAnimation = false;
+    public boolean hideItemFrames        = false;
 
     public boolean blockShadeEnabled = true;
     public List<BlockShadeEntry> blockShades = new ArrayList<>();
@@ -99,6 +111,7 @@ public class ModConfig {
                 if (cfg.blockShades == null) cfg.blockShades = new ArrayList<>();
                 if (cfg.adMessage == null) cfg.adMessage = "";
                 if (cfg.timers == null) cfg.timers = new ArrayList<>();
+                if (cfg.afkDimension == null) cfg.afkDimension = "minecraft:overworld";
                 cfg.scaleHud = clampScale(cfg.scaleHud);
                 return cfg;
             } catch (Exception e) {

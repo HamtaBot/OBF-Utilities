@@ -71,8 +71,8 @@ public class TimerRow extends Component {
                     for (int i = 0; i < 4; i++) ctx.fill(cx - 2 + i, cy - 3 + i, cx - 1 + i, cy + 4 - i, c);
                 }
             }
-            case RESTART -> ctx.drawText(tr(), "↻", cx - tr().getWidth("↻") / 2, cy - 4, c, false);
-            case EDIT    -> ctx.drawText(tr(), "✎", cx - tr().getWidth("✎") / 2, cy - 4, c, false);
+            case RESTART -> Draw.restartIcon(ctx, cx, cy, c);
+            case EDIT    -> Draw.editIcon(ctx, cx, cy, c);
         }
     }
 

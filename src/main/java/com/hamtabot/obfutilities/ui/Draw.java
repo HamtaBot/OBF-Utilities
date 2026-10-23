@@ -6,6 +6,7 @@ import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.sound.PositionedSoundInstance;
 import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.item.ItemStack;
 import net.minecraft.text.OrderedText;
 import net.minecraft.text.Text;
 import net.minecraft.sound.SoundEvents;
@@ -75,7 +76,72 @@ public final class Draw {
         m.pop();
     }
 
-    private static final Identifier LOGO = new Identifier("obfutilities", "textures/gui/logo.png");
+    public static void item(DrawContext ctx, ItemStack stack, float x, float y, float size) {
+        MatrixStack m = ctx.getMatrices();
+        m.push();
+        m.translate(x, y, 0);
+        m.scale(size / 16f, size / 16f, 1f);
+        ctx.drawItem(stack, 0, 0);
+        m.pop();
+    }
+
+    private interface Mask { boolean contains(float x, float y); }
+
+    private static void mask(DrawContext ctx, float cx, float cy, int r, int color, Mask m) {
+        MatrixStack ms = ctx.getMatrices();
+        ms.push();
+        ms.translate(cx, cy, 0);
+        ms.scale(0.25f, 0.25f, 1f);
+        for (int y = -r; y < r; y++) {
+            int start = Integer.MIN_VALUE;
+            for (int x = -r; x <= r; x++) {
+                boolean in = x < r && m.contains(x + 0.5f, y + 0.5f);
+                if (in && start == Integer.MIN_VALUE) start = x;
+                else if (!in && start != Integer.MIN_VALUE) {
+                    ctx.fill(start, y, x, y + 1, color);
+                    start = Integer.MIN_VALUE;
+                }
+            }
+        }
+        ms.pop();
+    }
+
+    public static void restartIcon(DrawContext ctx, float cx, float cy, int color) {
+        float inner = 9.5f, outer = 14.5f, mid = (inner + outer) / 2f;
+        double end = Math.toRadians(60);
+        float px = (float) (mid * Math.cos(end)), py = (float) (-mid * Math.sin(end));
+        float nx = (float) Math.cos(end), ny = (float) -Math.sin(end);
+        float tx = (float) Math.sin(end), ty = (float) Math.cos(end);
+        float[] a = { px + nx * 7.5f, py + ny * 7.5f };
+        float[] b = { px - nx * 7.5f, py - ny * 7.5f };
+        float[] c = { px + tx * 8f, py + ty * 8f };
+        mask(ctx, cx, cy, 18, color, (x, y) -> {
+            float d = (float) Math.sqrt(x * x + y * y);
+            double deg = Math.toDegrees(Math.atan2(-y, x));
+            if (deg < 0) deg += 360;
+            boolean ring = d >= inner && d <= outer && deg >= 60 && deg <= 350;
+            return ring || inTriangle(x, y, a, b, c);
+        });
+    }
+
+    public static void editIcon(DrawContext ctx, float cx, float cy, int color) {
+        mask(ctx, cx, cy, 18, color, (x, y) -> {
+            float u = (x - y) * 0.7071f, v = Math.abs(x + y) * 0.7071f;
+            if (u >= -8 && u <= 8 && v <= 3.75f) return true;
+            if (u >= 10 && u <= 14 && v <= 3.75f) return true;
+            return u >= -15.5f && u <= -9.5f && v <= 3.75f * (u + 15.5f) / 6f;
+        });
+    }
+
+    private static boolean inTriangle(float x, float y, float[] a, float[] b, float[] c) {
+        float d1 = (x - b[0]) * (a[1] - b[1]) - (a[0] - b[0]) * (y - b[1]);
+        float d2 = (x - c[0]) * (b[1] - c[1]) - (b[0] - c[0]) * (y - c[1]);
+        float d3 = (x - a[0]) * (c[1] - a[1]) - (c[0] - a[0]) * (y - a[1]);
+        boolean neg = d1 < 0 || d2 < 0 || d3 < 0, pos = d1 > 0 || d2 > 0 || d3 > 0;
+        return !(neg && pos);
+    }
+
+    private static final Identifier LOGO =new Identifier("obfutilities", "textures/gui/logo.png");
     private static final int LOGO_RES = 64;
 
     private static void logo(DrawContext ctx, int x, int y, int size) {

@@ -6,6 +6,7 @@ import com.hamtabot.obfutilities.config.ModConfig;
 import com.hamtabot.obfutilities.input.KeyRemap;
 import com.hamtabot.obfutilities.input.Keybinds;
 import com.hamtabot.obfutilities.stats.AdTimer;
+import com.hamtabot.obfutilities.stats.AfkTimer;
 import com.hamtabot.obfutilities.stats.ServerStats;
 import com.hamtabot.obfutilities.stats.SessionStats;
 import com.hamtabot.obfutilities.stats.SessionStore;
@@ -21,6 +22,9 @@ import com.hamtabot.obfutilities.waypoint.WaypointManager;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
+import net.minecraft.item.Item;
+import net.minecraft.item.ItemStack;
+import net.minecraft.item.Items;
 import net.minecraft.text.Text;
 import org.lwjgl.glfw.GLFW;
 
@@ -33,22 +37,25 @@ import java.util.Set;
 public class ConfigScreen extends Screen {
 
     public enum Page {
-        GENERAL  ("◆", "Général",      "Statistiques affichées dans le HUD"),
-        ADS      ("✉", "Publicité",    "Enregistre ta pub et envoie-la en un clic"),
-        TIMERS   ("◷", "Timers",       "Chronos et comptes à rebours, affichables à l'écran"),
-        BLOCKS   ("▣", "Blocs suivis", "Compte des blocs précis en plus des stats globales"),
-        AUTOTOOL ("⛏", "AutoTool",     "Prend automatiquement le bon outil de la hotbar"),
-        VISUALS  ("☀", "Visuel",       "Luminosité et overlays d'informations"),
-        SHADES   ("◐", "Blocs sombres", "Applique une texture sombre aux blocs de ton choix"),
-        CONTROLS ("⌨", "Contrôles",    "Drop sécurisé et touches de remplacement"),
-        WAYPOINTS("⚑", "Waypoints",    "Points de repère affichés dans le monde");
+        GENERAL  (Items.BOOK,            "Général",       "Statistiques affichées dans le HUD"),
+        ADS      (Items.PAPER,           "Publicité",     "Enregistre ta pub et envoie-la en un clic"),
+        AFK      (Items.RED_BED,         "AFK Timer",     "Temps passé dans la zone AFK du spawn"),
+        TIMERS   (Items.CLOCK,           "Timers",        "Chronos et comptes à rebours, affichables à l'écran"),
+        BLOCKS   (Items.GRASS_BLOCK,     "Blocs suivis",  "Compte des blocs précis en plus des stats globales"),
+        AUTOTOOL (Items.DIAMOND_PICKAXE, "AutoTool",      "Prend automatiquement le bon outil de la hotbar"),
+        VISUALS  (Items.TORCH,           "Visuel",        "Luminosité et overlays d'informations"),
+        OPTIMIZE (Items.FEATHER,         "Optimisations", "Allège le rendu pour gagner des FPS"),
+        SHADES   (Items.COAL_BLOCK,      "Blocs sombres", "Applique une texture sombre aux blocs de ton choix"),
+        CONTROLS (Items.LEVER,           "Contrôles",     "Drop sécurisé et touches de remplacement"),
+        WAYPOINTS(Items.MAP,             "Waypoints",     "Points de repère affichés dans le monde");
 
-        final String icon, title, subtitle;
-        Page(String icon, String title, String subtitle) { this.icon = icon; this.title = title; this.subtitle = subtitle; }
+        final ItemStack icon;
+        final String title, subtitle;
+        Page(Item icon, String title, String subtitle) { this.icon = new ItemStack(icon); this.title = title; this.subtitle = subtitle; }
     }
 
     private static final int MAX_W = 480, MAX_H = 340;
-    private static final int HEADER_H = 24, NAV_ITEM_H = 20;
+    private static final int HEADER_H = 24, NAV_ITEM_H = 20, NAV_ICON = 12;
     private static final int LOGO_SIZE = 18, TITLE_X = 10 + LOGO_SIZE + 6;
     private static final String VERSION = "v" + FabricLoader.getInstance().getModContainer(OBFUtilities.MOD_ID)
             .map(m -> m.getMetadata().getVersion().getFriendlyString()).orElse("?");
@@ -102,10 +109,12 @@ public class ConfigScreen extends Screen {
         switch (p) {
             case GENERAL   -> buildGeneral(c);
             case ADS       -> buildAds(c);
+            case AFK       -> buildAfk(c);
             case TIMERS    -> buildTimers(c);
             case BLOCKS    -> buildBlocks(c);
             case AUTOTOOL  -> buildAutoTool(c);
             case VISUALS   -> buildVisuals(c);
+            case OPTIMIZE  -> buildOptimizations(c);
             case SHADES    -> buildShades(c);
             case CONTROLS  -> buildControls(c);
             case WAYPOINTS -> buildWaypoints(c);
@@ -156,12 +165,41 @@ public class ConfigScreen extends Screen {
                 () -> cfg.adTitleEnabled, v -> cfg.adTitleEnabled = v));
     }
 
+    private void buildAfk(List<Component> c) {
+        c.add(new ToggleRow("Afficher dans le HUD", "Temps passé dans la zone AFK. Il tourne quand tu y entres et s'arrête quand tu en sors.",
+                () -> cfg.showAfkTimer, v -> cfg.showAfkTimer = v));
+        c.add(new ToggleRow("Garder après un redémarrage", "Le temps AFK reprend où il en était au prochain lancement du jeu.",
+                () -> cfg.keepAfkTimer, v -> { cfg.keepAfkTimer = v; AfkTimer.save(); }));
+        c.add(new ButtonRow("Réinitialiser le timer", "Remet le temps AFK à zéro.",
+                "Réinitialiser", Draw.ButtonStyle.DANGER, AfkTimer::reset));
+
+        c.add(new SectionTitle("Zone AFK"));
+        c.add(new ToggleRow("Zone personnalisée", "Utilise ta propre zone au lieu de celle du spawn (monde spawn2).",
+                () -> cfg.afkCustomZone, v -> { cfg.afkCustomZone = v; cfg.save(); refresh(); }));
+        if (!cfg.afkCustomZone) {
+            c.add(new InfoBox("Zone du spawn : monde spawn2, de X -264 à -247, Y 69 à 77, Z 230 à 248.", Theme.ACCENT));
+            return;
+        }
+        c.add(new ButtonRow("Coin 1", afkCorner(cfg.afkX1, cfg.afkY1, cfg.afkZ1),
+                () -> "Ma position", Draw.ButtonStyle.PRIMARY, () -> client.player != null,
+                () -> { AfkTimer.setCorner(client, true); refresh(); }));
+        c.add(new ButtonRow("Coin 2", afkCorner(cfg.afkX2, cfg.afkY2, cfg.afkZ2),
+                () -> "Ma position", Draw.ButtonStyle.PRIMARY, () -> client.player != null,
+                () -> { AfkTimer.setCorner(client, false); refresh(); }));
+        c.add(new InfoBox("Place-toi sur un coin de la zone et clique sur « Ma position », puis fais pareil au coin opposé. "
+                + "Les deux blocs sont inclus dans la zone.", Theme.ACCENT));
+    }
+
+    private String afkCorner(int x, int y, int z) {
+        return "X " + x + ", Y " + y + ", Z " + z + "  ·  " + cfg.afkDimension.replace("minecraft:", "");
+    }
+
     private void buildTimers(List<Component> c) {
         List<TimerEntry> timers = Timers.all();
         c.add(new ButtonRow("Nouveau timer", "Compte à rebours (title à la fin) ou chronomètre. " + Timers.MAX + " timers au maximum.",
                 () -> "+ Créer", Draw.ButtonStyle.PRIMARY, () -> timers.size() < Timers.MAX,
                 () -> client.setScreen(new TimerEditScreen(this, null))));
-        c.add(new ButtonRow("Placer les timers", "Active l'interrupteur d'un timer pour l'afficher, puis place-le et règle sa taille.",
+        c.add(new ButtonRow("Placer les timers", "Active un timer pour l'afficher, puis place-le et règle sa taille.",
                 "Modifier", Draw.ButtonStyle.SECONDARY, this::openHudEditor));
 
         c.add(new SectionTitle("Mes timers (" + timers.size() + ")"));
@@ -221,6 +259,20 @@ public class ConfigScreen extends Screen {
                 () -> cfg.debugShowRam, v -> cfg.debugShowRam = v));
         c.add(new ButtonRow("Placer les overlays", "Glisse chaque overlay où tu veux sur l'écran.",
                 "Modifier", Draw.ButtonStyle.PRIMARY, this::openHudEditor));
+    }
+
+    private void buildOptimizations(List<Component> c) {
+        c.add(new SectionTitle("Entités"));
+        c.add(new ToggleRow("Cacher l'armure des joueurs", "N'affiche plus l'armure des autres joueurs autour de toi. La tienne reste visible.",
+                () -> cfg.hideOtherArmor, v -> cfg.hideOtherArmor = v));
+        c.add(new ToggleRow("Cacher les cadres", "Les cadres deviennent invisibles, mais l'objet ou la carte qu'ils contiennent reste affiché.",
+                () -> cfg.hideItemFrames, v -> cfg.hideItemFrames = v));
+
+        c.add(new SectionTitle("Effets"));
+        c.add(new ToggleRow("Désactiver les particules", "Supprime toutes les particules du jeu : explosions, potions, blocs cassés, fumée...",
+                () -> cfg.disableParticles, v -> cfg.disableParticles = v));
+        c.add(new ToggleRow("Pas d'animation des coffres", "Les coffres et coffres de l'Ender s'ouvrent sans animer leur couvercle.",
+                () -> cfg.disableChestAnimation, v -> cfg.disableChestAnimation = v));
     }
 
     private void buildShades(List<Component> c) {
@@ -285,7 +337,7 @@ public class ConfigScreen extends Screen {
         List<Waypoint> all = WaypointManager.getAll();
         c.add(new SectionTitle("Mes waypoints (" + all.size() + ")"));
         if (all.isEmpty()) {
-            c.add(new InfoBox("Aucun waypoint. \"Partager\" copie un waypoint : colle-le dans le chat pour que les autres puissent l'importer en un clic.", Theme.TEXT_MUTED));
+            c.add(new InfoBox("Aucun waypoint. \"Partager\" copie un waypoint : colle-le dans en MP pour que les autres puissent l'importer en un clic.", Theme.TEXT_MUTED));
         }
         for (Waypoint wp : new ArrayList<>(all)) {
             c.add(new WaypointRow(wp, () -> { WaypointManager.remove(wp); refresh(); }));
@@ -345,12 +397,12 @@ public class ConfigScreen extends Screen {
             } else if (hov) {
                 Draw.round(ctx, b[0], b[1], b[2], b[3], Theme.SURFACE_HOVER);
             }
-            int iconColor = selected ? Theme.ACCENT : hov ? Theme.TEXT : Theme.TEXT_MUTED;
             int textY = b[1] + (b[3] - 8) / 2 + 1;
+            int iconY = b[1] + (b[3] - NAV_ICON) / 2;
             if (compactNav) {
-                ctx.drawText(textRenderer, p.icon, b[0] + (b[2] - textRenderer.getWidth(p.icon)) / 2, textY, iconColor, false);
+                Draw.item(ctx, p.icon, b[0] + (b[2] - NAV_ICON) / 2, iconY, NAV_ICON);
             } else {
-                ctx.drawText(textRenderer, p.icon, b[0] + 8, textY, iconColor, false);
+                Draw.item(ctx, p.icon, b[0] + 6, iconY, NAV_ICON);
                 ctx.drawText(textRenderer, Draw.ellipsize(textRenderer, p.title, b[2] - 26), b[0] + 22, textY,
                         selected || hov ? Theme.TEXT : Theme.TEXT_MUTED, false);
             }
