@@ -38,7 +38,7 @@ import java.util.Set;
 public class ConfigScreen extends Screen {
 
     public enum Page {
-        GENERAL  (Items.BOOK,            "Général",       "Statistiques affichées dans le HUD"),
+        GENERAL  (Items.BOOK,            "HUD",           "Affichage et statistiques du HUD de session"),
         ADS      (Items.PAPER,           "Publicité",     "Enregistre ta pub et envoie-la en un clic"),
         AFK      (Items.RED_BED,         "AFK Timer",     "Temps passé dans ta zone AFK"),
         TIMERS   (Items.CLOCK,           "Timers",        "Chronos et comptes à rebours, affichables à l'écran"),
@@ -135,7 +135,7 @@ public class ConfigScreen extends Screen {
     }
 
     private void buildGeneral(List<Component> c) {
-        c.add(new SectionTitle("HUD"));
+        c.add(new SectionTitle("Affichage"));
         c.add(new ToggleRow("HUD visible", "Raccourci : [" + Format.keyName(Keybinds.toggleHud) + "]",
                 () -> OBFUtilities.getHud().isVisible(), v -> OBFUtilities.getHud().toggleVisible()));
         c.add(new ButtonRow("Position et taille", "Déplace le HUD à la souris, et agrandis-le avec le coin en bas à droite.",
