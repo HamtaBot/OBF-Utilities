@@ -1,6 +1,6 @@
 package com.hamtabot.obfutilities.mixin;
 
-import com.hamtabot.obfutilities.OBFUtilities;
+import com.hamtabot.obfutilities.stats.SessionStats;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.ClientPlayNetworkHandler;
 import net.minecraft.entity.Entity;
@@ -68,7 +68,7 @@ public class StackKillMixin {
             if (prevCount != null && newCount < prevCount) {
                 int killed = prevCount - newCount;
                 if (client.player.squaredDistanceTo(entity) < MAX_DISTANCE_SQUARED) {
-                    OBFUtilities.onMobKilled(killed);
+                    SessionStats.onMobKilled(killed);
                 }
             }
 

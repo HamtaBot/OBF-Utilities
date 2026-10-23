@@ -9,10 +9,10 @@
     "ChatMixin",
     "JoinMixin",
     "AutoToolMixin",
-    "LightTextureMixin",
     "WaypointChatMixin",
     "DoubleDropPlayerMixin",
-    "DoubleDropScreenMixin"
+    "DoubleDropScreenMixin",
+    "SpriteContentsAccessor"
   ],
   "injectors": {
     "defaultRequire": 1

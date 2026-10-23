@@ -1,214 +1,129 @@
 package com.hamtabot.obfutilities.debug;
 
 import com.hamtabot.obfutilities.OBFUtilities;
+import com.hamtabot.obfutilities.config.ModConfig;
+import com.hamtabot.obfutilities.ui.Draw;
+import com.hamtabot.obfutilities.ui.Theme;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.entity.player.PlayerEntity;
-import org.lwjgl.glfw.GLFW;
+
+import java.util.List;
 
 public class DebugOverlay {
 
-    private static boolean draggingFps    = false;
-    private static boolean draggingCoords = false;
-    private static boolean draggingRam    = false;
-    private static int dragFpsOffX, dragFpsOffY;
-    private static int dragCoordsOffX, dragCoordsOffY;
-    private static int dragRamOffX, dragRamOffY;
+    public enum Element { FPS, COORDS, RAM }
 
-    private static boolean wasMouseDown = false;
+    private static final int PAD = 6, BAR_GAP = 7, H = 16, GAUGE_W = 32;
 
-    public static boolean cfgDraggingFps    = false;
-    public static boolean cfgDraggingCoords = false;
-    public static boolean cfgDraggingRam    = false;
-    public static int cfgDragFpsOffX, cfgDragFpsOffY;
-    public static int cfgDragCoordsOffX, cfgDragCoordsOffY;
-    public static int cfgDragRamOffX, cfgDragRamOffY;
+    private record Seg(String text, int color) {}
 
-    private static final int PAD_X = 7;
-    private static final int PAD_Y = 4;
-    private static final int H = 16;
+    private record Pill(List<Seg> segs, int accent, int gaugePct, int gaugeColor) {
+        int textWidth(TextRenderer tr) {
+            int w = 0;
+            for (Seg s : segs) w += tr.getWidth(s.text());
+            return w;
+        }
 
-    private static final int BG_BASE       = 0xCC0A0A12;
-    private static final int ACCENT_FPS    = 0xFF4FC3F7;
-    private static final int ACCENT_COORDS = 0xFF80CBC4;
-    private static final int ACCENT_RAM    = 0xFFCE93D8;
+        int width(TextRenderer tr) { return BAR_GAP + textWidth(tr) + (gaugePct >= 0 ? 5 + GAUGE_W : 0) + PAD; }
+    }
 
-    public static boolean inConfigScreen = false;
-
-    public static void render(DrawContext context, float tickDelta) {
+    public static void render(DrawContext ctx, boolean editing) {
         MinecraftClient client = MinecraftClient.getInstance();
         if (client.player == null) return;
+        for (Element e : Element.values()) {
+            if (isEnabled(e)) renderPill(ctx, client, e, editing);
+        }
+    }
+
+    private static void renderPill(DrawContext ctx, MinecraftClient client, Element e, boolean editing) {
         TextRenderer tr = client.textRenderer;
-        int sw = client.getWindow().getScaledWidth();
-        int sh = client.getWindow().getScaledHeight();
+        Pill pill = pill(client, e);
+        int[] b = bounds(e, pill.width(tr));
+        int x = b[0], y = b[1], w = b[2];
 
-        if (OBFUtilities.config.debugShowFps) {
-            int fps = client.getCurrentFps();
-            int col = fps >= 60 ? 0xFF66BB6A : fps >= 30 ? 0xFFFFD54F : 0xFFFF5252;
-            String text = fps + " FPS";
-            int w = tr.getWidth(text) + PAD_X * 2 + 6;
-            int x = clamp(OBFUtilities.config.debugFpsX, 0, sw - w);
-            int y = clamp(OBFUtilities.config.debugFpsY, 0, sh - H);
-            OBFUtilities.config.debugFpsX = x;
-            OBFUtilities.config.debugFpsY = y;
-            drawPill(context, x, y, w, H, ACCENT_FPS);
-            context.drawText(tr, text, x + PAD_X + 6, y + PAD_Y, col, false);
+        Draw.overlayCard(ctx, x, y, w, H, pill.accent(), editing);
+
+        int tx = x + BAR_GAP, ty = y + (H - 8) / 2 + 1;
+        for (Seg s : pill.segs()) {
+            ctx.drawText(tr, s.text(), tx, ty, s.color(), false);
+            tx += tr.getWidth(s.text());
         }
 
-        if (OBFUtilities.config.debugShowCoords) {
-            PlayerEntity player = client.player;
-            int px = (int) player.getX(), py = (int) player.getY(), pz = (int) player.getZ();
-            float yaw = ((player.getYaw() % 360) + 360) % 360;
-            String dir = yaw < 45 || yaw >= 315 ? "S" : yaw < 135 ? "O" : yaw < 225 ? "N" : "E";
-            String text = "X " + px + "  Y " + py + "  Z " + pz + "  §8" + dir;
-            String textPlain = "X " + px + "  Y " + py + "  Z " + pz + "  " + dir;
-            int w = tr.getWidth(textPlain) + PAD_X * 2 + 6;
-            int x = clamp(OBFUtilities.config.debugCoordsX, 0, sw - w);
-            int y = clamp(OBFUtilities.config.debugCoordsY, 0, sh - H);
-            OBFUtilities.config.debugCoordsX = x;
-            OBFUtilities.config.debugCoordsY = y;
-            drawPill(context, x, y, w, H, ACCENT_COORDS);
-            context.drawText(tr, text, x + PAD_X + 6, y + PAD_Y, 0xFF80CBC4, false);
-        }
-
-        if (OBFUtilities.config.debugShowRam) {
-            Runtime rt = Runtime.getRuntime();
-            long used = (rt.totalMemory() - rt.freeMemory()) / 1024 / 1024;
-            long max  = rt.maxMemory() / 1024 / 1024;
-            int pct   = (int) (used * 100 / max);
-            int col   = pct < 60 ? 0xFF66BB6A : pct < 80 ? 0xFFFFD54F : 0xFFFF5252;
-            String text = used + " / " + max + " Mo";
-            int w = tr.getWidth(text) + PAD_X * 2 + 6 + 40;
-            int x = clamp(OBFUtilities.config.debugRamX, 0, sw - w);
-            int y = clamp(OBFUtilities.config.debugRamY, 0, sh - H);
-            OBFUtilities.config.debugRamX = x;
-            OBFUtilities.config.debugRamY = y;
-            drawPill(context, x, y, w, H, ACCENT_RAM);
-            context.drawText(tr, text, x + PAD_X + 6, y + PAD_Y, 0xFFCE93D8, false);
-            int barX = x + PAD_X + 6 + tr.getWidth(text) + 4;
-            int barW = 32;
-            int barY = y + PAD_Y + 1;
-            int barH = 6;
-            context.fill(barX, barY, barX + barW, barY + barH, 0x44FFFFFF);
-            int filled = (int) (barW * pct / 100f);
-            context.fill(barX, barY, barX + filled, barY + barH, col & 0xAAFFFFFF | (col & 0x00FFFFFF));
-            context.fill(barX, barY, barX + barW, barY + 1, 0x33FFFFFF);
-            context.fill(barX, barY + barH - 1, barX + barW, barY + barH, 0x33FFFFFF);
+        if (pill.gaugePct() >= 0) {
+            int gx = tx + 5, gy = y + (H - 4) / 2;
+            Draw.round(ctx, gx, gy, GAUGE_W, 4, Theme.SWITCH_OFF);
+            Draw.round(ctx, gx, gy, Math.max(2, GAUGE_W * pill.gaugePct() / 100), 4, pill.gaugeColor());
         }
     }
 
-    private static void drawPill(DrawContext ctx, int x, int y, int w, int h, int accent) {
-        ctx.fill(x, y, x + w, y + h, BG_BASE);
-        ctx.fill(x, y, x + 3, y + h, accent);
-        int borderSubtle = inConfigScreen ? (accent & 0x00FFFFFF | 0x88000000) : 0x22FFFFFF;
-        ctx.fill(x + 3, y,         x + w, y + 1,     borderSubtle);
-        ctx.fill(x + 3, y + h - 1, x + w, y + h,     borderSubtle);
-        ctx.fill(x + w - 1, y + 1, x + w, y + h - 1, borderSubtle);
-        if (inConfigScreen) {
-            ctx.fill(x, y,         x + w, y + 1,         0x55FFD54F);
-            ctx.fill(x, y + h - 1, x + w, y + h,         0x55FFD54F);
-            ctx.fill(x + 3, y + 1, x + 4, y + h - 1,     0x22FFD54F);
-            ctx.fill(x + w - 1, y + 1, x + w, y + h - 1, 0x55FFD54F);
-        }
+    private static Pill pill(MinecraftClient client, Element e) {
+        return switch (e) { case FPS -> fpsPill(client); case COORDS -> coordsPill(client.player); case RAM -> ramPill(); };
     }
 
-    public static void tick(MinecraftClient client) {
-        if (client.currentScreen != null) return;
-        if (client.player == null) return;
-        if (!inConfigScreen) {
-            draggingFps = false;
-            draggingCoords = false;
-            draggingRam = false;
-            return;
-        }
-        if (client.player == null) return;
+    private static int status(boolean good, boolean ok) { return good ? Theme.SUCCESS : ok ? Theme.WARNING : Theme.DANGER; }
 
-        long window = client.getWindow().getHandle();
-        double scale = client.getWindow().getScaleFactor();
-        double[] mx = new double[1], my = new double[1];
-        GLFW.glfwGetCursorPos(window, mx, my);
-        int mouseX = (int) (mx[0] / scale), mouseY = (int) (my[0] / scale);
-        boolean down = GLFW.glfwGetMouseButton(window, GLFW.GLFW_MOUSE_BUTTON_LEFT) == GLFW.GLFW_PRESS;
-
-        boolean justPressed = down && !wasMouseDown;
-        wasMouseDown = down;
-
-        TextRenderer tr = client.textRenderer;
-
-        if (OBFUtilities.config.debugShowFps) {
-            int fps = client.getCurrentFps();
-            String text = fps + " FPS";
-            int w = tr.getWidth(text) + PAD_X * 2 + 6;
-            int x = OBFUtilities.config.debugFpsX, y = OBFUtilities.config.debugFpsY;
-            if (justPressed && !draggingFps && !draggingCoords && !draggingRam
-                    && mouseX >= x && mouseX <= x + w && mouseY >= y && mouseY <= y + H) {
-                draggingFps = true; dragFpsOffX = mouseX - x; dragFpsOffY = mouseY - y;
-            }
-            if (draggingFps) {
-                if (down) { OBFUtilities.config.debugFpsX = mouseX - dragFpsOffX; OBFUtilities.config.debugFpsY = mouseY - dragFpsOffY; }
-                else { draggingFps = false; OBFUtilities.config.save(); }
-            }
-        }
-
-        if (OBFUtilities.config.debugShowCoords) {
-            if (client.player != null) {
-                int px = (int) client.player.getX(), py = (int) client.player.getY(), pz = (int) client.player.getZ();
-                String textPlain = "X " + px + "  Y " + py + "  Z " + pz + "  S";
-                int w = tr.getWidth(textPlain) + PAD_X * 2 + 6;
-                int x = OBFUtilities.config.debugCoordsX, y = OBFUtilities.config.debugCoordsY;
-                if (justPressed && !draggingFps && !draggingCoords && !draggingRam
-                        && mouseX >= x && mouseX <= x + w && mouseY >= y && mouseY <= y + H) {
-                    draggingCoords = true; dragCoordsOffX = mouseX - x; dragCoordsOffY = mouseY - y;
-                }
-                if (draggingCoords) {
-                    if (down) { OBFUtilities.config.debugCoordsX = mouseX - dragCoordsOffX; OBFUtilities.config.debugCoordsY = mouseY - dragCoordsOffY; }
-                    else { draggingCoords = false; OBFUtilities.config.save(); }
-                }
-            }
-        }
-
-        if (OBFUtilities.config.debugShowRam) {
-            Runtime rt = Runtime.getRuntime();
-            long used = (rt.totalMemory() - rt.freeMemory()) / 1024 / 1024;
-            long max  = rt.maxMemory() / 1024 / 1024;
-            String text = used + " / " + max + " Mo";
-            int w = tr.getWidth(text) + PAD_X * 2 + 6 + 40;
-            int x = OBFUtilities.config.debugRamX, y = OBFUtilities.config.debugRamY;
-            if (justPressed && !draggingFps && !draggingCoords && !draggingRam
-                    && mouseX >= x && mouseX <= x + w && mouseY >= y && mouseY <= y + H) {
-                draggingRam = true; dragRamOffX = mouseX - x; dragRamOffY = mouseY - y;
-            }
-            if (draggingRam) {
-                if (down) { OBFUtilities.config.debugRamX = mouseX - dragRamOffX; OBFUtilities.config.debugRamY = mouseY - dragRamOffY; }
-                else { draggingRam = false; OBFUtilities.config.save(); }
-            }
-        }
-    }
-
-    public static int[] getFpsBounds(TextRenderer tr, MinecraftClient client) {
+    private static Pill fpsPill(MinecraftClient client) {
         int fps = client.getCurrentFps();
-        String text = fps + " FPS";
-        int w = tr.getWidth(text) + PAD_X * 2 + 6;
-        return new int[]{ OBFUtilities.config.debugFpsX, OBFUtilities.config.debugFpsY, w, H };
+        int col = status(fps >= 60, fps >= 30);
+        return new Pill(List.of(new Seg(String.valueOf(fps), col), new Seg(" FPS", Theme.TEXT_MUTED)), col, -1, 0);
     }
 
-    public static int[] getCoordsBounds(TextRenderer tr, MinecraftClient client) {
-        if (client.player == null) return new int[]{0, 0, 0, 0};
-        int px = (int) client.player.getX(), py = (int) client.player.getY(), pz = (int) client.player.getZ();
-        String textPlain = "X " + px + "  Y " + py + "  Z " + pz + "  S";
-        int w = tr.getWidth(textPlain) + PAD_X * 2 + 6;
-        return new int[]{ OBFUtilities.config.debugCoordsX, OBFUtilities.config.debugCoordsY, w, H };
+    private static Pill coordsPill(PlayerEntity p) {
+        float yaw = ((p.getYaw() % 360) + 360) % 360;
+        String dir = yaw < 45 || yaw >= 315 ? "S" : yaw < 135 ? "O" : yaw < 225 ? "N" : "E";
+        return new Pill(List.of(
+                new Seg("X ", Theme.TEXT_MUTED), new Seg(String.valueOf((int) p.getX()), Theme.TEXT),
+                new Seg("  Y ", Theme.TEXT_MUTED), new Seg(String.valueOf((int) p.getY()), Theme.TEXT),
+                new Seg("  Z ", Theme.TEXT_MUTED), new Seg(String.valueOf((int) p.getZ()), Theme.TEXT),
+                new Seg("  " + dir, Theme.ACCENT)), Theme.ACCENT, -1, 0);
     }
 
-    public static int[] getRamBounds(TextRenderer tr) {
+    private static Pill ramPill() {
         Runtime rt = Runtime.getRuntime();
         long used = (rt.totalMemory() - rt.freeMemory()) / 1024 / 1024;
         long max  = rt.maxMemory() / 1024 / 1024;
-        String text = used + " / " + max + " Mo";
-        int w = tr.getWidth(text) + PAD_X * 2 + 6 + 40;
-        return new int[]{ OBFUtilities.config.debugRamX, OBFUtilities.config.debugRamY, w, H };
+        int pct   = (int) (used * 100 / max);
+        return new Pill(List.of(new Seg(String.valueOf(used), Theme.TEXT), new Seg(" / " + max + " Mo", Theme.TEXT_MUTED)),
+                Theme.PURPLE, pct, status(pct < 60, pct < 80));
     }
 
-    private static int clamp(int v, int min, int max) { return Math.max(min, Math.min(v, max)); }
+    public static int[] bounds(Element e, TextRenderer tr) {
+        MinecraftClient client = MinecraftClient.getInstance();
+        if (client.player == null) return new int[]{0, 0, 0, 0};
+        return bounds(e, pill(client, e).width(tr));
+    }
+
+    private static int[] bounds(Element e, int w) {
+        MinecraftClient client = MinecraftClient.getInstance();
+        int x = Math.max(0, Math.min(getX(e), client.getWindow().getScaledWidth()  - w));
+        int y = Math.max(0, Math.min(getY(e), client.getWindow().getScaledHeight() - H));
+        return new int[]{ x, y, w, H };
+    }
+
+    public static boolean isEnabled(Element e) {
+        ModConfig c = OBFUtilities.config;
+        return switch (e) { case FPS -> c.debugShowFps; case COORDS -> c.debugShowCoords; case RAM -> c.debugShowRam; };
+    }
+
+    private static int getX(Element e) {
+        ModConfig c = OBFUtilities.config;
+        return switch (e) { case FPS -> c.debugFpsX; case COORDS -> c.debugCoordsX; case RAM -> c.debugRamX; };
+    }
+
+    private static int getY(Element e) {
+        ModConfig c = OBFUtilities.config;
+        return switch (e) { case FPS -> c.debugFpsY; case COORDS -> c.debugCoordsY; case RAM -> c.debugRamY; };
+    }
+
+    public static void setPos(Element e, int x, int y) {
+        ModConfig c = OBFUtilities.config;
+        switch (e) {
+            case FPS    -> { c.debugFpsX = x;    c.debugFpsY = y; }
+            case COORDS -> { c.debugCoordsX = x; c.debugCoordsY = y; }
+            case RAM    -> { c.debugRamX = x;    c.debugRamY = y; }
+        }
+    }
+
 }
