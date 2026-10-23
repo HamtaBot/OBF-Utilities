@@ -143,6 +143,13 @@ public final class Draw {
         for (int i = 0; i < 4; i++) ctx.fill(cx - 2 + i, cy - 3 + i, cx - 1 + i, cy + 4 - i, color);
     }
 
+    public static void arrowIcon(DrawContext ctx, int cx, int cy, boolean up, int color) {
+        for (int i = 0; i < 3; i++) {
+            int row = up ? cy - 1 + i : cy + 1 - i;
+            ctx.fill(cx - i, row, cx + i + 1, row + 1, color);
+        }
+    }
+
     public static void pauseIcon(DrawContext ctx, int cx, int cy, int color) {
         ctx.fill(cx - 3, cy - 3, cx - 1, cy + 4, color);
         ctx.fill(cx + 1, cy - 3, cx + 3, cy + 4, color);
