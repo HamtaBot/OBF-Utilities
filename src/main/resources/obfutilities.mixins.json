@@ -12,7 +12,11 @@
     "WaypointChatMixin",
     "DoubleDropPlayerMixin",
     "DoubleDropScreenMixin",
-    "SpriteContentsAccessor"
+    "SpriteContentsAccessor",
+    "HideArmorMixin",
+    "NoParticlesMixin",
+    "NoChestAnimationMixin",
+    "HideItemFrameMixin"
   ],
   "injectors": {
     "defaultRequire": 1

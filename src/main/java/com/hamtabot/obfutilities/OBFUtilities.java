@@ -8,6 +8,7 @@ import com.hamtabot.obfutilities.hud.OBFHud;
 import com.hamtabot.obfutilities.input.KeyRemap;
 import com.hamtabot.obfutilities.input.Keybinds;
 import com.hamtabot.obfutilities.stats.AdTimer;
+import com.hamtabot.obfutilities.stats.AfkTimer;
 import com.hamtabot.obfutilities.stats.ServerStats;
 import com.hamtabot.obfutilities.stats.SessionStats;
 import com.hamtabot.obfutilities.stats.SessionStore;
@@ -38,6 +39,7 @@ public class OBFUtilities implements ClientModInitializer {
         config = ModConfig.load();
         hud = new OBFHud();
         SessionStore.load();
+        AfkTimer.load();
 
         Keybinds.register();
         WaypointManager.load();
@@ -45,7 +47,7 @@ public class OBFUtilities implements ClientModInitializer {
         WaypointRenderer.register();
 
         ClientLifecycleEvents.CLIENT_STARTED.register(KeyRemap::applySaved);
-        ClientLifecycleEvents.CLIENT_STOPPING.register(c -> SessionStore.save());
+        ClientLifecycleEvents.CLIENT_STOPPING.register(c -> { SessionStore.save(); AfkTimer.save(); });
 
         HudRenderCallback.EVENT.register((ctx, delta) -> {
             if (MinecraftClient.getInstance().currentScreen instanceof HudEditScreen) return;
@@ -61,6 +63,7 @@ public class OBFUtilities implements ClientModInitializer {
             SessionStats.tick();
             SessionStore.tick();
             AdTimer.tick();
+            AfkTimer.tick(client);
             Timers.tick(client);
             StatsReader.tick(client);
             ServerStats.tick(client);

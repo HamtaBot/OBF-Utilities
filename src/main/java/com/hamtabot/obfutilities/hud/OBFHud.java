@@ -4,6 +4,7 @@ import com.hamtabot.obfutilities.OBFUtilities;
 import com.hamtabot.obfutilities.config.ModConfig;
 import com.hamtabot.obfutilities.input.Keybinds;
 import com.hamtabot.obfutilities.stats.AdTimer;
+import com.hamtabot.obfutilities.stats.AfkTimer;
 import com.hamtabot.obfutilities.stats.ServerStats;
 import com.hamtabot.obfutilities.stats.SessionStats;
 import com.hamtabot.obfutilities.stats.StatCounter;
@@ -14,12 +15,16 @@ import com.hamtabot.obfutilities.util.Format;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.DrawContext;
+import net.minecraft.item.ItemStack;
+import net.minecraft.item.Items;
 
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Properties;
 
 public class OBFHud {
@@ -32,7 +37,16 @@ public class OBFHud {
     private static final int STAT_CARD_H      = 38;
     private static final int AD_CARD_H        = 16;
 
-    private static final Path POS_FILE = Paths.get("obfutilities_hud_pos.properties");
+    private static final int ICON = 10, ICON_W = ICON + 3;
+    private static final ItemStack ICON_PLACED = new ItemStack(Items.BRICKS);
+    private static final ItemStack ICON_MINED  = new ItemStack(Items.IRON_PICKAXE);
+    private static final ItemStack ICON_KILLS  = new ItemStack(Items.IRON_SWORD);
+    private static final ItemStack ICON_AD     = new ItemStack(Items.PAPER);
+    private static final ItemStack ICON_AFK    = new ItemStack(Items.RED_BED);
+
+    private final Map<String, ItemStack> customIcons = new HashMap<>();
+
+    private static final Path POS_FILE =Paths.get("obfutilities_hud_pos.properties");
 
     private int posX = 10;
     private int posY = 10;
@@ -68,17 +82,19 @@ public class OBFHud {
         ctx.drawText(tr, hint, posX + (pw - tr.getWidth(hint)) / 2, ty, Theme.TEXT_DIM, false);
         ty += s(10) + s(4);
 
-        if (cfg.showBlocksPlaced) ty = drawStatCard(ctx, tr, ty, "◈ Blocs posés", Theme.ACCENT,  SessionStats.PLACED, cfg.serverTotalPlaced, "blocs");
-        if (cfg.showBlocksMined)  ty = drawStatCard(ctx, tr, ty, "⛏ Blocs minés", Theme.SUCCESS, SessionStats.MINED,  cfg.serverTotalMined,  "blocs");
-        if (cfg.showMobsKilled)   ty = drawStatCard(ctx, tr, ty, "⚔ Mobs tués",   Theme.DANGER,  SessionStats.KILLS,  cfg.serverTotalKills,  "mobs");
+        if (cfg.showBlocksPlaced) ty = drawStatCard(ctx, tr, ty, ICON_PLACED, "Blocs posés", Theme.ACCENT,  SessionStats.PLACED, cfg.serverTotalPlaced, "blocs");
+        if (cfg.showBlocksMined)  ty = drawStatCard(ctx, tr, ty, ICON_MINED,  "Blocs minés", Theme.SUCCESS, SessionStats.MINED,  cfg.serverTotalMined,  "blocs");
+        if (cfg.showMobsKilled)   ty = drawStatCard(ctx, tr, ty, ICON_KILLS,  "Mobs tués",   Theme.DANGER,  SessionStats.KILLS,  cfg.serverTotalKills,  "mobs");
 
         for (ModConfig.CustomBlockEntry e : cfg.customBlocks) {
             if (!e.enabled) continue;
-            String label = "◉ " + Format.blockName(e.blockId) + " (" + (e.trackPlaced ? "posé" : "miné") + ")";
-            ty = drawStatCard(ctx, tr, ty, label, Theme.PURPLE, SessionStats.custom(e), StatsReader.getCustomTotal(e), "blocs");
+            String label = Format.blockName(e.blockId) + " (" + (e.trackPlaced ? "posé" : "miné") + ")";
+            ItemStack icon = customIcons.computeIfAbsent(e.blockId, id -> Format.icon(id, true));
+            ty = drawStatCard(ctx, tr, ty, icon, label, Theme.PURPLE, SessionStats.custom(e), StatsReader.getCustomTotal(e), "blocs");
         }
 
-        if (cfg.showAdTimer) drawAdCard(ctx, tr, ty);
+        if (cfg.showAdTimer)  ty = drawAdCard(ctx, tr, ty);
+        if (cfg.showAfkTimer) drawAfkCard(ctx, tr, ty);
 
         renderConnectionNotice(ctx, tr, ph);
     }
@@ -98,7 +114,7 @@ public class OBFHud {
         ctx.drawText(tr, time, bx + 4, textY, Theme.ACCENT, false);
     }
 
-    private int drawStatCard(DrawContext ctx, TextRenderer tr, int ty, String label, int color,
+    private int drawStatCard(DrawContext ctx, TextRenderer tr, int ty, ItemStack icon, String label, int color,
                              StatCounter counter, int total, String unit) {
         int left = posX + s(PADDING), w = getWidth() - s(PADDING) * 2, right = left + w - s(6);
         int h = s(STAT_CARD_H);
@@ -108,7 +124,8 @@ public class OBFHud {
         int tx = left + s(8), y = ty + s(4);
         String rate = counter.getRate() > 0f ? String.format("%.1f/s", counter.getRate()) : null;
         int rateW = rate != null ? tr.getWidth(rate) + s(6) : 0;
-        ctx.drawText(tr, Draw.ellipsize(tr, label, right - tx - rateW), tx, y, color, false);
+        Draw.item(ctx, icon, tx, y - 1, ICON);
+        ctx.drawText(tr, Draw.ellipsize(tr, label, right - tx - ICON_W - rateW), tx + ICON_W, y, color, false);
         if (rate != null) ctx.drawText(tr, rate, right - tr.getWidth(rate), y, Theme.ACCENT, false);
         y += s(11);
 
@@ -124,7 +141,7 @@ public class OBFHud {
         return ty + h + s(CARD_GAP);
     }
 
-    private void drawAdCard(DrawContext ctx, TextRenderer tr, int ty) {
+    private int drawAdCard(DrawContext ctx, TextRenderer tr, int ty) {
         int left = posX + s(PADDING), w = getWidth() - s(PADDING) * 2, right = left + w - s(6);
         int h = s(AD_CARD_H);
         boolean ok = AdTimer.isAvailable();
@@ -132,9 +149,25 @@ public class OBFHud {
         ctx.fill(left + 1, ty + s(3), left + 3, ty + h - s(3), Theme.PURPLE);
 
         int y = ty + (h - 8) / 2 + 1;
-        ctx.drawText(tr, "⏰ Prochaine pub", left + s(8), y, Theme.PURPLE, false);
+        Draw.item(ctx, ICON_AD, left + s(8), y - 1, ICON);
+        ctx.drawText(tr, "Prochaine pub", left + s(8) + ICON_W, y, Theme.PURPLE, false);
         String sv = ok ? "Disponible !" : Format.countdown(AdTimer.getRemainingMs());
         ctx.drawText(tr, sv, right - tr.getWidth(sv), y, ok ? Theme.SUCCESS : Theme.WARNING, false);
+        return ty + h + s(CARD_GAP);
+    }
+
+    private void drawAfkCard(DrawContext ctx, TextRenderer tr, int ty) {
+        int left = posX + s(PADDING), w = getWidth() - s(PADDING) * 2, right = left + w - s(6);
+        int h = s(AD_CARD_H);
+        boolean active = AfkTimer.isActive();
+        Draw.card(ctx, left, ty, w, h, Theme.SURFACE, Theme.BORDER);
+        ctx.fill(left + 1, ty + s(3), left + 3, ty + h - s(3), Theme.WARNING);
+
+        int y = ty + (h - 8) / 2 + 1;
+        Draw.item(ctx, ICON_AFK, left + s(8), y - 1, ICON);
+        ctx.drawText(tr, active ? "Temps AFK (en cours)" : "Temps AFK", left + s(8) + ICON_W, y, Theme.WARNING, false);
+        String sv = Format.duration(AfkTimer.getElapsedMs());
+        ctx.drawText(tr, sv, right - tr.getWidth(sv), y, active ? Theme.SUCCESS : Theme.TEXT_MUTED, false);
     }
 
     public int getHeight() {
@@ -148,7 +181,8 @@ public class OBFHud {
             if (e.enabled) cards++;
         }
         h += cards * (s(STAT_CARD_H) + s(CARD_GAP));
-        if (cfg.showAdTimer) h += s(AD_CARD_H) + s(CARD_GAP);
+        if (cfg.showAdTimer)  h += s(AD_CARD_H) + s(CARD_GAP);
+        if (cfg.showAfkTimer) h += s(AD_CARD_H) + s(CARD_GAP);
         return h - s(CARD_GAP) + s(PADDING);
     }
 

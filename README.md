@@ -1,79 +1,106 @@
-# OBF-Utilities — Mod Fabric 1.20.1
+# 📦 OBF-Utilities — Mod client Fabric 1.20.1
 
-Mod client Fabric développé par **OneBlockFrance** pour le serveur OBF.  
-Overlay HUD configurable avec statistiques de session, autotool, fullbright et outils de débug.
+> Développé par **OneBlockFrance**
+> 🔗 GitHub : https://github.com/HamtaBot/OBF-Utilities
+
+Tout se règle depuis le menu de config (`O` en jeu).
 
 ---
 
-## Fonctionnalités
+## 🖥️ HUD de session
+Tes stats en temps réel, directement à l'écran :
 
-### HUD de session
-- **Blocs posés** — session + total + blocs/sec en temps réel
-- **Blocs minés** — session + total + blocs/sec en temps réel
-- **Mobs tués** — compatible stacker (lit les nameplates de stack)
-- **Blocs custom** — tracker plusieurs blocs spécifiques simultanément (posé ou miné), chacun avec session + total + /sec
-- **Timer de pub** — détecte tes messages avec `[i]` ou `[item]` et lance un countdown de 15 minutes avec notification en titre quand disponible
-- **Durée de session** — affichée à côté du titre, remise à zéro au reset
-- **Taux /sec** — affiché en temps réel, disparaît automatiquement à l'inactivité
-- **Overlay déplaçable** — position mémorisée
+- **Blocs posés** : session, total serveur et blocs/sec
+- **Blocs minés** : session, total serveur et blocs/sec
+- **Mobs tués** : session, total serveur et mobs/sec, stacks de mobs compris
+- **Blocs suivis** : compte n'importe quel bloc précis, posé ou miné, avec son icône
+- **Durée de session** affichée en haut du HUD
+- Option pour **garder la session** après un redémarrage du jeu
 
-### AutoTool
-- Sélection automatique du meilleur outil dans la hotbar en fonction du bloc ciblé
-- Supporte : pioche, pelle, hache, houe, cisaille, épée
-- Chaque outil activable/désactivable individuellement
-- Option pour ignorer les outils à moins de 10 de durabilité
-- Très réactif — conçu pour le oneblock
+Les totaux serveur sont récupérés automatiquement à la connexion, sans polluer le chat. Un bouton permet de les actualiser (une fois toutes les 15 min).
 
-### FullBright
-- Bouton ON/OFF
+> Le HUD se déplace à la souris et se redimensionne par le coin en bas à droite. Il s'aimante aux bords et au centre de l'écran.
 
-### Débug
-- **FPS** — couleur dynamique (vert ≥60, jaune ≥30, rouge <30)
-- **Coordonnées** — X/Y/Z + direction cardinale
-- **RAM** — utilisée / allouée en Mo avec pourcentage
-- Chaque overlay déplaçable indépendamment (depuis la config)
+## ⏰ Publicité
+- Enregistre ta pub dans le mod et envoie-la en un clic
+- Détecte `[i]` ou `[item]` dans tes messages et lance un compte à rebours de 15 min
+- Message à l'écran quand tu peux renvoyer ta pub
 
-### Stats globales serveur
-- À la connexion, envoie automatiquement une commande et lit la réponse
-- Les totaux blocs posés, minés et mobs tués sont récupérés du serveur
-- Les messages de réponse sont cachés du chat
-- Bouton **Actualiser** dans la config (cooldown 15 minutes)
-- Les totaux sont calculés à la connexion uniquement
+## 💤 AFK Timer
+- Compte le temps passé dans la zone AFK du spawn : il démarre quand tu y entres et s'arrête quand tu en sors
+- Possibilité de définir **ta propre zone** : place-toi sur deux coins opposés et clique sur « Ma position »
+- Bouton de réinitialisation
+- Option pour garder le temps après un redémarrage du jeu
 
-### Waypoints
-- Possiblitée de créer des waypoints et de les partager facilement avec une config
+## ⏱️ Timers
+- Jusqu'à 10 timers : comptes à rebours ou chronomètres
+- Title et son à la fin d'un compte à rebours
+- Basés sur l'heure réelle : un compte à rebours continue même jeu fermé (pratique pour les votes)
+- Affichables à l'écran, déplaçables et redimensionnables
+
+## ⛏️ AutoTool
+Prend automatiquement le meilleur outil de ta hotbar selon le bloc visé, et ton arme quand tu frappes un mob.
+- Pioche, pelle, hache, houe, cisailles et épée, chacune activable séparément
+- Option pour ignorer les outils à 10 de durabilité ou moins
+- Très réactif, pensé pour le OneBlock
+
+## 🚀 Optimisations
+- **Cacher l'armure** des autres joueurs (la tienne reste visible)
+- **Cacher les cadres** sans cacher l'objet ou la carte qu'ils contiennent
+- **Désactiver toutes les particules**
+- **Couper l'animation d'ouverture** des coffres et coffres de l'Ender
+
+## 🌑 Blocs sombres
+- Applique une texture sombre aux blocs de ton choix, plus reposante pour les yeux
+- Fonctionne partout, icônes de l'inventaire comprises, et avec Sodium
+
+## ☀️ Visuel
+- **FullBright** : vision nocturne côté client
+- **Overlays**, déplaçables chacun à la souris :
+  - FPS en couleur (vert ≥ 60, jaune ≥ 30, rouge < 30)
+  - Coordonnées X/Y/Z et direction (N/S/E/O)
+  - RAM utilisée / allouée avec une jauge
+
+## 📍 Waypoints
+- Marqueurs dans le monde avec nom et couleur, visibles à travers les blocs jusqu'à 1000 blocs
+- Un affichage par dimension (Overworld, Nether, End)
+- **Partage en un clic** : le bouton « Partager » copie le waypoint, colle-le dans le chat et les autres joueurs qui ont le mod l'importent en cliquant dessus
+
+## 🎮 Contrôles
+- **Double appui pour jeter** : évite de drop un objet par erreur
+- **Remplacer le clic gauche ou droit** par une touche du clavier, directement depuis le mod (plus besoin de changer la touche dans les paramètres)
+
 ---
 
-##  Touches (configurables dans Options → Contrôles → OBF Utilities)
+## ⌨️ Touches par défaut
 
-| Touche par défaut | Action |
+| Touche | Action |
 |---|---|
-| `K` | Afficher / Cacher le HUD |
+| `K` | Afficher / cacher le HUD |
 | `O` | Ouvrir la configuration |
+| `N` | Créer un waypoint |
+| `G` | Ouvrir les waypoints |
+
+*Modifiables dans Options → Contrôles → Touches, catégorie OBF Utilities.*
 
 ---
 
-## Interface de configuration
+## Installation
 
-Appuie sur `O` en jeu pour ouvrir plusieurs panneaux déplaçables indépendamment :
+1. Installe [Fabric Loader](https://fabricmc.net/use/installer/) pour Minecraft 1.20.1
+2. Télécharge [Fabric API](https://modrinth.com/mod/fabric-api/versions?g=1.20.1) pour 1.20.1
+3. Copie le `.jar` d'OBF-Utilities **et** celui de Fabric API dans `.minecraft/mods/`
+4. Lance Minecraft avec le profil **Fabric 1.20.1**
 
-| Panneau | Contenu |
-|---|---|
-| **Paramètres** | Toggles sections HUD, reset session, actualiser stats |
-| **Blocs custom** | Ajouter/supprimer des blocs custom avec sélecteur de bloc et icônes |
-| **AutoTool** | ON/OFF, skip durabilité, sélection des outils autorisés |
-| **FullBright** | ON/OFF, réglage de la luminosité |
-| **Débug** | ON/OFF pour FPS, coordonnées, RAM |
-
-Les positions des panneaux sont **mémorisées** entre les sessions.
-
----
-
-## Prérequis
-
-- **Java 17** ou supérieur
-- **Minecraft 1.20.1** avec **Fabric Loader ≥ 0.14.22**
+### Prérequis
+- **Minecraft 1.20.1**
+- **Fabric Loader 0.15.0** ou plus récent
 - **Fabric API** pour 1.20.1
+- **Java 17** ou plus récent
+
+### Compatibilité
+- Fonctionne avec les launchers qui acceptent les mods Fabric (launcher officiel, Prism, MultiMC, Modrinth, Feather...)
+- **Lunar Client n'est pas compatible** : il n'accepte pas les mods Fabric ajoutés à la main
 
 ---
 
@@ -90,16 +117,7 @@ chmod +x gradlew
 ./gradlew build
 ```
 
-Le `.jar` compilé se trouve dans `build/libs/obf-utilities-x.x.x.jar`.
-
----
-
-## Installation
-
-1. Installe [Fabric Loader](https://fabricmc.net/use/installer/) pour Minecraft 1.20.1
-2. Télécharge [Fabric API](https://modrinth.com/mod/fabric-api/versions?g=1.20.1) pour 1.20.1
-3. Copie `obf-utilities-2.0.0.jar` **et** `fabric-api-xxx.jar` dans `.minecraft/mods/`
-4. Lance Minecraft avec le profil **Fabric 1.20.1**
+Le `.jar` se trouve ensuite dans `build/libs/`.
 
 ---
 
@@ -107,7 +125,8 @@ Le `.jar` compilé se trouve dans `build/libs/obf-utilities-x.x.x.jar`.
 
 | Fichier | Contenu |
 |---|---|
-| `config/obfutilities.json` | Configuration complète (sections, blocs custom, positions des panneaux, etc.) |
-| `obfutilities_hud_pos.properties` | Position de l'overlay HUD |
-
----
+| `config/obfutilities.json` | Configuration du mod (options, blocs suivis, timers, zone AFK...) |
+| `config/obfutilities_waypoints.json` | Waypoints |
+| `config/obfutilities_session.json` | Session sauvegardée (si « Garder la session » est activé) |
+| `config/obfutilities_afk.json` | Temps AFK sauvegardé (si l'option est activée) |
+| `obfutilities_hud_pos.properties` | Position du HUD |
