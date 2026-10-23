@@ -64,12 +64,8 @@ public class TimerRow extends Component {
         int cx = bx + BTN / 2, cy = by + BTN / 2, c = 0xFFFFFFFF;
         switch (a) {
             case PLAY -> {
-                if (timer.running) {
-                    ctx.fill(cx - 3, cy - 3, cx - 1, cy + 4, c);
-                    ctx.fill(cx + 1, cy - 3, cx + 3, cy + 4, c);
-                } else {
-                    for (int i = 0; i < 4; i++) ctx.fill(cx - 2 + i, cy - 3 + i, cx - 1 + i, cy + 4 - i, c);
-                }
+                if (timer.running) Draw.pauseIcon(ctx, cx, cy, c);
+                else Draw.playIcon(ctx, cx, cy, c);
             }
             case RESTART -> Draw.restartIcon(ctx, cx, cy, c);
             case EDIT    -> Draw.editIcon(ctx, cx, cy, c);

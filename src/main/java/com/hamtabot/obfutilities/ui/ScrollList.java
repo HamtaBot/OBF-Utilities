@@ -34,6 +34,15 @@ public class ScrollList {
 
     public boolean isEmpty() { return components.isEmpty(); }
 
+    public void reveal(Component c) {
+        layout(0);
+        int top = c.getY() - y, bottom = top + c.getHeight();
+        if (bottom > target + height) target = bottom - height;
+        else if (top < target) target = top;
+        target = Math.max(0, Math.min(target, maxScroll()));
+        scroll.set(target);
+    }
+
     private int innerWidth() { return width - SCROLLBAR_W - 4; }
 
     private int maxScroll() { return Math.max(0, contentHeight - height); }

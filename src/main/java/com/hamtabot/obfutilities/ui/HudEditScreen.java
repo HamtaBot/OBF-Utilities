@@ -53,7 +53,7 @@ public class HudEditScreen extends Screen {
         if (scale > 0) ctx.drawTooltip(textRenderer, Text.literal(Math.round(scale * 100) + " %"), mouseX, mouseY);
     }
 
-    private static final String HINT = "Glisse pour déplacer · coin ↘ ou molette pour la taille";
+    private static final String HINT = "Glisse pour déplacer · coin en bas à droite ou molette pour la taille";
 
     private int[] toolbar() {
         int w = Math.min(width - 12, Math.max(textRenderer.getWidth(HINT) + 20, 260));

@@ -14,7 +14,7 @@ public class ServerStats {
 
     private static final long REFRESH_COOLDOWN_MS = 15 * 60 * 1000L;
     private static final long NOTICE_DURATION_MS  = 5 * 60 * 1000L;
-    private static final long JOIN_DELAY_MS       = 3000;
+    public  static final long JOIN_DELAY_MS       = 3000;
 
     private static final Pattern MINED_PATTERN  = Pattern.compile("blocs min[ée]s\\s*:\\s*([\\d,\\.]{1,20})", Pattern.CASE_INSENSITIVE);
     private static final Pattern PLACED_PATTERN = Pattern.compile("blocs pos[ée]s\\s*:\\s*([\\d,\\.]{1,20})", Pattern.CASE_INSENSITIVE);

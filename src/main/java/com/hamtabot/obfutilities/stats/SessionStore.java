@@ -2,10 +2,8 @@ package com.hamtabot.obfutilities.stats;
 
 import com.google.gson.Gson;
 import com.hamtabot.obfutilities.OBFUtilities;
+import com.hamtabot.obfutilities.util.JsonFiles;
 
-import java.io.Reader;
-import java.io.Writer;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.HashMap;
@@ -28,13 +26,9 @@ public final class SessionStore {
     }
 
     public static void load() {
-        if (!OBFUtilities.config.keepSession || !Files.exists(FILE)) return;
-        try (Reader r = Files.newBufferedReader(FILE)) {
-            Data d = GSON.fromJson(r, Data.class);
-            if (d != null) SessionStats.restore(d);
-        } catch (Exception e) {
-            OBFUtilities.LOGGER.error("[OBF] Erreur chargement session: " + e.getMessage());
-        }
+        if (!OBFUtilities.config.keepSession) return;
+        Data d = JsonFiles.read(FILE, Data.class, GSON);
+        if (d != null) SessionStats.restore(d);
     }
 
     public static void tick() {
@@ -42,15 +36,10 @@ public final class SessionStore {
         if (now - lastSave < SAVE_EVERY_MS) return;
         lastSave = now;
         save();
+        AfkTimer.save();
     }
 
     public static void save() {
-        if (!OBFUtilities.config.keepSession) return;
-        try {
-            Files.createDirectories(FILE.getParent());
-            try (Writer w = Files.newBufferedWriter(FILE)) { GSON.toJson(SessionStats.snapshot(), w); }
-        } catch (Exception e) {
-            OBFUtilities.LOGGER.error("[OBF] Erreur sauvegarde session: " + e.getMessage());
-        }
+        if (OBFUtilities.config.keepSession) JsonFiles.write(FILE, SessionStats.snapshot(), GSON);
     }
 }

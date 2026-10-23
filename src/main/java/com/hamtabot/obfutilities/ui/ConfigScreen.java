@@ -16,6 +16,7 @@ import com.hamtabot.obfutilities.timer.Timers;
 import com.hamtabot.obfutilities.ui.component.*;
 import com.hamtabot.obfutilities.util.Format;
 import com.hamtabot.obfutilities.util.OsUtil;
+import com.hamtabot.obfutilities.warp.WarpMacros;
 import com.hamtabot.obfutilities.waypoint.Waypoint;
 import com.hamtabot.obfutilities.waypoint.WaypointCreateScreen;
 import com.hamtabot.obfutilities.waypoint.WaypointManager;
@@ -39,7 +40,7 @@ public class ConfigScreen extends Screen {
     public enum Page {
         GENERAL  (Items.BOOK,            "Général",       "Statistiques affichées dans le HUD"),
         ADS      (Items.PAPER,           "Publicité",     "Enregistre ta pub et envoie-la en un clic"),
-        AFK      (Items.RED_BED,         "AFK Timer",     "Temps passé dans la zone AFK du spawn"),
+        AFK      (Items.RED_BED,         "AFK Timer",     "Temps passé dans ta zone AFK"),
         TIMERS   (Items.CLOCK,           "Timers",        "Chronos et comptes à rebours, affichables à l'écran"),
         BLOCKS   (Items.GRASS_BLOCK,     "Blocs suivis",  "Compte des blocs précis en plus des stats globales"),
         AUTOTOOL (Items.DIAMOND_PICKAXE, "AutoTool",      "Prend automatiquement le bon outil de la hotbar"),
@@ -47,7 +48,9 @@ public class ConfigScreen extends Screen {
         OPTIMIZE (Items.FEATHER,         "Optimisations", "Allège le rendu pour gagner des FPS"),
         SHADES   (Items.COAL_BLOCK,      "Blocs sombres", "Applique une texture sombre aux blocs de ton choix"),
         CONTROLS (Items.LEVER,           "Contrôles",     "Drop sécurisé et touches de remplacement"),
-        WAYPOINTS(Items.MAP,             "Waypoints",     "Points de repère affichés dans le monde");
+        WAYPOINTS(Items.MAP,             "Waypoints",     "Points de repère affichés dans le monde"),
+        WARPS    (Items.ENDER_PEARL,     "Macro Warps",   "Une touche du clavier pour chaque /warp du serveur"),
+        STORAGE  (Items.HOPPER,          "Unité stockage", "Déposer et prendre en un clic dans les unités de stockage");
 
         final ItemStack icon;
         final String title, subtitle;
@@ -55,7 +58,7 @@ public class ConfigScreen extends Screen {
     }
 
     private static final int MAX_W = 480, MAX_H = 340;
-    private static final int HEADER_H = 24, NAV_ITEM_H = 20, NAV_ICON = 12;
+    private static final int HEADER_H = 24, NAV_ITEM_H = 20, NAV_ICON = 12, NAV_HINT_H = 18;
     private static final int LOGO_SIZE = 18, TITLE_X = 10 + LOGO_SIZE + 6;
     private static final String VERSION = "v" + FabricLoader.getInstance().getModContainer(OBFUtilities.MOD_ID)
             .map(m -> m.getMetadata().getVersion().getFriendlyString()).orElse("?");
@@ -66,6 +69,11 @@ public class ConfigScreen extends Screen {
     private final ModConfig cfg = OBFUtilities.config;
     private final ScrollList list = new ScrollList();
     private Page page;
+    private final ScrollList navList = new ScrollList();
+    private final List<NavItem> navItems = new ArrayList<>();
+    private Page hoveredNav;
+    private boolean showNavHint;
+    private int warpsVersion = WarpMacros.version();
     private long adSentAt;
 
     private int winX, winY, winW, winH, navW, contentX;
@@ -87,7 +95,8 @@ public class ConfigScreen extends Screen {
         winX = (width - winW) / 2;
         winY = (height - winH) / 2;
         compactNav = winW < 340;
-        navW = compactNav ? 28 : 108;
+        navW = compactNav ? 28 : 118;
+        layoutNav();
 
         contentX = winX + navW + 10;
         int listY = winY + HEADER_H + 32;
@@ -100,6 +109,7 @@ public class ConfigScreen extends Screen {
         page = p;
         lastPage = p;
         list.setComponents(buildPage(p), false);
+        navList.reveal(navItems.get(p.ordinal()));
     }
 
     private void refresh() { list.setComponents(buildPage(page), true); }
@@ -118,6 +128,8 @@ public class ConfigScreen extends Screen {
             case SHADES    -> buildShades(c);
             case CONTROLS  -> buildControls(c);
             case WAYPOINTS -> buildWaypoints(c);
+            case WARPS     -> buildWarps(c);
+            case STORAGE   -> buildStorage(c);
         }
         return c;
     }
@@ -174,24 +186,24 @@ public class ConfigScreen extends Screen {
                 "Réinitialiser", Draw.ButtonStyle.DANGER, AfkTimer::reset));
 
         c.add(new SectionTitle("Zone AFK"));
-        c.add(new ToggleRow("Zone personnalisée", "Utilise ta propre zone au lieu de celle du spawn (monde spawn2).",
-                () -> cfg.afkCustomZone, v -> { cfg.afkCustomZone = v; cfg.save(); refresh(); }));
-        if (!cfg.afkCustomZone) {
-            c.add(new InfoBox("Zone du spawn : monde spawn2, de X -264 à -247, Y 69 à 77, Z 230 à 248.", Theme.ACCENT));
-            return;
-        }
-        c.add(new ButtonRow("Coin 1", afkCorner(cfg.afkX1, cfg.afkY1, cfg.afkZ1),
+        c.add(new ButtonRow("Coin 1", afkCorner(cfg.afkCorner1),
                 () -> "Ma position", Draw.ButtonStyle.PRIMARY, () -> client.player != null,
                 () -> { AfkTimer.setCorner(client, true); refresh(); }));
-        c.add(new ButtonRow("Coin 2", afkCorner(cfg.afkX2, cfg.afkY2, cfg.afkZ2),
+        c.add(new ButtonRow("Coin 2", afkCorner(cfg.afkCorner2),
                 () -> "Ma position", Draw.ButtonStyle.PRIMARY, () -> client.player != null,
                 () -> { AfkTimer.setCorner(client, false); refresh(); }));
-        c.add(new InfoBox("Place-toi sur un coin de la zone et clique sur « Ma position », puis fais pareil au coin opposé. "
-                + "Les deux blocs sont inclus dans la zone.", Theme.ACCENT));
+        boolean hasZone = AfkTimer.hasZone();
+        if (hasZone) {
+            c.add(new ButtonRow("Effacer la zone", "Supprime les deux coins. Le timer ne tourne plus tant qu'une nouvelle zone n'est pas définie.",
+                    "Effacer", Draw.ButtonStyle.DANGER, () -> { AfkTimer.clearZone(); refresh(); }));
+        }
+        c.add(new InfoBox("Place-toi sur un coin de la zone AFK et clique sur « Ma position », puis fais pareil au coin opposé. "
+                + "Les deux blocs sont inclus dans la zone.", hasZone ? Theme.ACCENT : Theme.WARNING));
     }
 
-    private String afkCorner(int x, int y, int z) {
-        return "X " + x + ", Y " + y + ", Z " + z + "  ·  " + cfg.afkDimension.replace("minecraft:", "");
+    private String afkCorner(int[] corner) {
+        if (!AfkTimer.isCorner(corner)) return "Non défini";
+        return "X " + corner[0] + ", Y " + corner[1] + ", Z " + corner[2] + "  ·  " + cfg.afkDimension.replace("minecraft:", "");
     }
 
     private void buildTimers(List<Component> c) {
@@ -204,7 +216,7 @@ public class ConfigScreen extends Screen {
 
         c.add(new SectionTitle("Mes timers (" + timers.size() + ")"));
         if (timers.isEmpty()) {
-            c.add(new InfoBox("Aucun timer. Exemple : un compte à rebours \"Vote\" de 24 h, à relancer avec ↻ après chaque vote.", Theme.TEXT_MUTED));
+            c.add(new InfoBox("Aucun timer pour l'instant. Exemple : un compte à rebours « Vote » de 24 h, que tu relances après chaque vote.", Theme.TEXT_MUTED));
         }
         for (int i = 0; i < timers.size(); i++) {
             TimerEntry t = timers.get(i);
@@ -212,7 +224,8 @@ public class ConfigScreen extends Screen {
                     () -> { timers.remove(t); cfg.save(); refresh(); }));
         }
         if (!timers.isEmpty()) {
-            c.add(new InfoBox("▶ démarrer / pause  ·  ↻ relancer depuis le début  ·  ✎ modifier  ·  interrupteur : afficher à l'écran", Theme.ACCENT));
+            c.add(new SectionTitle("Légende"));
+            c.add(new TimerLegend());
         }
     }
 
@@ -263,7 +276,7 @@ public class ConfigScreen extends Screen {
 
     private void buildOptimizations(List<Component> c) {
         c.add(new SectionTitle("Entités"));
-        c.add(new ToggleRow("Cacher l'armure des joueurs", "N'affiche plus l'armure des autres joueurs autour de toi. La tienne reste visible.",
+        c.add(new ToggleRow("Cacher l'équipement des joueurs", "Cache l'armure, les objets en main et en seconde main, et ce qu'ils portent sur la tête (papier, têtes...). Le tien reste visible.",
                 () -> cfg.hideOtherArmor, v -> cfg.hideOtherArmor = v));
         c.add(new ToggleRow("Cacher les cadres", "Les cadres deviennent invisibles, mais l'objet ou la carte qu'ils contiennent reste affiché.",
                 () -> cfg.hideItemFrames, v -> cfg.hideItemFrames = v));
@@ -271,8 +284,10 @@ public class ConfigScreen extends Screen {
         c.add(new SectionTitle("Effets"));
         c.add(new ToggleRow("Désactiver les particules", "Supprime toutes les particules du jeu : explosions, potions, blocs cassés, fumée...",
                 () -> cfg.disableParticles, v -> cfg.disableParticles = v));
-        c.add(new ToggleRow("Pas d'animation des coffres", "Les coffres et coffres de l'Ender s'ouvrent sans animer leur couvercle.",
+        c.add(new ToggleRow("Pas d'animation des coffres", "Les coffres, coffres de l'Ender et shulker boxes s'ouvrent sans animer leur couvercle.",
                 () -> cfg.disableChestAnimation, v -> cfg.disableChestAnimation = v));
+        c.add(new ToggleRow("Cacher le mob des spawners", "Le mob qui tourne dans les spawners n'est plus affiché, la cage reste visible.",
+                () -> cfg.disableSpawnerAnimation, v -> cfg.disableSpawnerAnimation = v));
     }
 
     private void buildShades(List<Component> c) {
@@ -326,6 +341,40 @@ public class ConfigScreen extends Screen {
         c.add(new InfoBox("Les raccourcis du mod (HUD, config, waypoints) se changent dans Options › Contrôles › Touches, catégorie OBF Utilities.", Theme.ACCENT));
     }
 
+    private void buildWarps(List<Component> c) {
+        c.add(new ButtonRow("Actualiser la liste", "Récupère les warps du serveur avec /warp. C'est fait automatiquement à chaque connexion.",
+                () -> WarpMacros.isSyncing() ? "..." : "Actualiser", Draw.ButtonStyle.SECONDARY,
+                () -> client.player != null && !WarpMacros.isSyncing(), WarpMacros::refresh));
+
+        List<ModConfig.WarpBind> warps = cfg.warps;
+        c.add(new SectionTitle("Warps (" + warps.size() + ")"));
+        if (warps.isEmpty()) {
+            c.add(new InfoBox("Aucun warp trouvé. Connecte-toi au serveur, la liste se remplit toute seule.", Theme.TEXT_MUTED));
+            return;
+        }
+        for (ModConfig.WarpBind w : warps) {
+            c.add(new KeyBindRow(w.name, "/warp " + w.name, () -> w.key, k -> WarpMacros.setKey(w, k), true));
+        }
+        c.add(new InfoBox("Clique sur le bouton d'un warp puis appuie sur une touche. Retour arrière pour retirer la touche, Échap pour annuler. "
+                + "Les touches marchent en jeu, pas dans le chat ni dans un menu.", Theme.ACCENT));
+    }
+
+    private void buildStorage(List<Component> c) {
+        c.add(new ToggleRow("Bouton « Tout déposer »", "Dépose dans l'unité tous les objets de ton inventaire identiques au bloc qu'elle contient.",
+                () -> cfg.storageDepositEnabled, v -> cfg.storageDepositEnabled = v));
+        c.add(new ToggleRow("Bouton « Tout prendre »", "Prend des stacks dans l'unité jusqu'à ce que ton inventaire soit plein.",
+                () -> cfg.storageWithdrawEnabled, v -> cfg.storageWithdrawEnabled = v));
+        c.add(new InfoBox("Les boutons apparaissent à côté de l'unité quand tu l'ouvres. Clique sur « Arrêter » pour interrompre.", Theme.ACCENT));
+    }
+
+    @Override
+    public void tick() {
+        if (warpsVersion != WarpMacros.version() && !list.isCapturingKeys()) {
+            warpsVersion = WarpMacros.version();
+            if (page == Page.WARPS) refresh();
+        }
+    }
+
     private void buildWaypoints(List<Component> c) {
         c.add(new ToggleRow("Afficher les waypoints", "Affiche les waypoints de la dimension actuelle jusqu'à 1000 blocs.",
                 () -> cfg.waypointsEnabled, v -> cfg.waypointsEnabled = v));
@@ -362,10 +411,7 @@ public class ConfigScreen extends Screen {
 
         super.render(ctx, mouseX, mouseY, delta);
 
-        if (compactNav) {
-            Page hovered = navAt(mouseX, mouseY);
-            if (hovered != null) ctx.drawTooltip(textRenderer, Text.literal(hovered.title), mouseX, mouseY);
-        }
+        if (compactNav && hoveredNav != null) ctx.drawTooltip(textRenderer, Text.literal(hoveredNav.title), mouseX, mouseY);
     }
 
     private void renderHeader(DrawContext ctx, int mouseX, int mouseY) {
@@ -382,53 +428,66 @@ public class ConfigScreen extends Screen {
         }
     }
 
+    private void layoutNav() {
+        navItems.clear();
+        for (Page p : Page.values()) navItems.add(new NavItem(p));
+        int top = winY + HEADER_H + 6, available = winH - HEADER_H - 12;
+        int contentH = navItems.size() * (NAV_ITEM_H + Theme.ROW_GAP) - Theme.ROW_GAP;
+        showNavHint = !compactNav && contentH + NAV_HINT_H <= available;
+        navList.setBounds(winX + 4, top, navW - 4, showNavHint ? available - NAV_HINT_H : available);
+        navList.setComponents(new ArrayList<>(navItems), true);
+        navList.reveal(navItems.get(page.ordinal()));
+    }
+
     private void renderNav(DrawContext ctx, int mouseX, int mouseY) {
         int nx = winX + 1, ny = winY + HEADER_H + 1;
         ctx.fill(nx, ny, nx + navW - 1, winY + winH - 2, Theme.SIDEBAR);
         ctx.fill(nx + navW - 1, ny, nx + navW, winY + winH - 1, Theme.DIVIDER);
 
-        for (Page p : Page.values()) {
-            int[] b = navBounds(p);
-            boolean selected = p == page;
-            boolean hov = Draw.inside(mouseX, mouseY, b[0], b[1], b[2], b[3]);
+        hoveredNav = null;
+        navList.render(ctx, mouseX, mouseY);
+
+        if (showNavHint) {
+            String hint = Draw.ellipsize(textRenderer, "Échap pour fermer", navW - 14);
+            ctx.drawText(textRenderer, hint, winX + 8, winY + winH - 14, Theme.TEXT_DIM, false);
+        }
+    }
+
+    private class NavItem extends Component {
+
+        private final Page target;
+
+        NavItem(Page target) { this.target = target; }
+
+        @Override public int getHeight() { return NAV_ITEM_H; }
+
+        @Override
+        public void render(DrawContext ctx, int mouseX, int mouseY) {
+            boolean selected = target == page;
+            boolean hov = isHovered(mouseX, mouseY);
+            if (hov) hoveredNav = target;
             if (selected) {
-                Draw.round(ctx, b[0], b[1], b[2], b[3], Theme.ACCENT_SURFACE);
-                ctx.fill(b[0], b[1] + 4, b[0] + 2, b[1] + b[3] - 4, Theme.ACCENT);
+                Draw.round(ctx, x, y, width, NAV_ITEM_H, Theme.ACCENT_SURFACE);
+                ctx.fill(x, y + 4, x + 2, y + NAV_ITEM_H - 4, Theme.ACCENT);
             } else if (hov) {
-                Draw.round(ctx, b[0], b[1], b[2], b[3], Theme.SURFACE_HOVER);
+                Draw.round(ctx, x, y, width, NAV_ITEM_H, Theme.SURFACE_HOVER);
             }
-            int textY = b[1] + (b[3] - 8) / 2 + 1;
-            int iconY = b[1] + (b[3] - NAV_ICON) / 2;
+            int iconY = y + (NAV_ITEM_H - NAV_ICON) / 2;
             if (compactNav) {
-                Draw.item(ctx, p.icon, b[0] + (b[2] - NAV_ICON) / 2, iconY, NAV_ICON);
-            } else {
-                Draw.item(ctx, p.icon, b[0] + 6, iconY, NAV_ICON);
-                ctx.drawText(textRenderer, Draw.ellipsize(textRenderer, p.title, b[2] - 26), b[0] + 22, textY,
-                        selected || hov ? Theme.TEXT : Theme.TEXT_MUTED, false);
+                Draw.item(ctx, target.icon, x + (width - NAV_ICON) / 2, iconY, NAV_ICON);
+                return;
             }
+            Draw.item(ctx, target.icon, x + 6, iconY, NAV_ICON);
+            ctx.drawText(tr(), Draw.ellipsize(tr(), target.title, width - 26), x + 22, y + (NAV_ITEM_H - 8) / 2 + 1,
+                    selected || hov ? Theme.TEXT : Theme.TEXT_MUTED, false);
         }
 
-        if (!compactNav) {
-            String hint = "Échap pour fermer";
-            int hy = winY + winH - 14;
-            if (hy > navBounds(Page.values()[Page.values().length - 1])[1] + NAV_ITEM_H + 4) {
-                ctx.drawText(textRenderer, Draw.ellipsize(textRenderer, hint, navW - 14), winX + 8, hy, Theme.TEXT_DIM, false);
-            }
+        @Override
+        public boolean mouseClicked(double mouseX, double mouseY, int button) {
+            if (button != 0 || !isHovered(mouseX, mouseY)) return false;
+            showPage(target);
+            return true;
         }
-    }
-
-    private int[] navBounds(Page p) {
-        int x = winX + 4, w = navW - 8;
-        int y = winY + HEADER_H + 6 + p.ordinal() * (NAV_ITEM_H + 2);
-        return new int[]{ x, y, w, NAV_ITEM_H };
-    }
-
-    private Page navAt(double mx, double my) {
-        for (Page p : Page.values()) {
-            int[] b = navBounds(p);
-            if (Draw.inside(mx, my, b[0], b[1], b[2], b[3])) return p;
-        }
-        return null;
     }
 
     private int[] closeBounds() {
@@ -450,27 +509,29 @@ public class ConfigScreen extends Screen {
             if (Draw.inside(mouseX, mouseY, c[0], c[1], Theme.CLOSE_SIZE, Theme.CLOSE_SIZE)) { close(); return true; }
             int[] e = hudButtonBounds();
             if (e != null && Draw.inside(mouseX, mouseY, e[0], e[1], e[2], e[3])) { openHudEditor(); return true; }
-            Page p = navAt(mouseX, mouseY);
-            if (p != null) { showPage(p); return true; }
         }
+        if (navList.mouseClicked(mouseX, mouseY, button)) return true;
         if (list.mouseClicked(mouseX, mouseY, button)) return true;
         return super.mouseClicked(mouseX, mouseY, button);
     }
 
     @Override
     public boolean mouseDragged(double mouseX, double mouseY, int button, double dx, double dy) {
+        if (navList.mouseDragged(mouseX, mouseY)) return true;
         if (list.mouseDragged(mouseX, mouseY)) return true;
         return super.mouseDragged(mouseX, mouseY, button, dx, dy);
     }
 
     @Override
     public boolean mouseReleased(double mouseX, double mouseY, int button) {
+        navList.mouseReleased();
         list.mouseReleased();
         return super.mouseReleased(mouseX, mouseY, button);
     }
 
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double amount) {
+        if (navList.mouseScrolled(mouseX, mouseY, amount)) return true;
         if (list.mouseScrolled(mouseX, mouseY, amount)) return true;
         return super.mouseScrolled(mouseX, mouseY, amount);
     }

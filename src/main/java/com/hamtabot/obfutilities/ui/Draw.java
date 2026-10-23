@@ -13,6 +13,7 @@ import net.minecraft.sound.SoundEvents;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.RotationAxis;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public final class Draw {
@@ -87,26 +88,40 @@ public final class Draw {
 
     private interface Mask { boolean contains(float x, float y); }
 
-    private static void mask(DrawContext ctx, float cx, float cy, int r, int color, Mask m) {
-        MatrixStack ms = ctx.getMatrices();
-        ms.push();
-        ms.translate(cx, cy, 0);
-        ms.scale(0.25f, 0.25f, 1f);
+    private static final int[] RESTART_RUNS = runs(18, restartMask());
+    private static final int[] EDIT_RUNS = runs(18, (x, y) -> {
+        float u = (x - y) * 0.7071f, v = Math.abs(x + y) * 0.7071f;
+        if (u >= -8 && u <= 8 && v <= 3.75f) return true;
+        if (u >= 10 && u <= 14 && v <= 3.75f) return true;
+        return u >= -15.5f && u <= -9.5f && v <= 3.75f * (u + 15.5f) / 6f;
+    });
+
+    private static int[] runs(int r, Mask m) {
+        List<Integer> out = new ArrayList<>();
         for (int y = -r; y < r; y++) {
             int start = Integer.MIN_VALUE;
             for (int x = -r; x <= r; x++) {
                 boolean in = x < r && m.contains(x + 0.5f, y + 0.5f);
                 if (in && start == Integer.MIN_VALUE) start = x;
                 else if (!in && start != Integer.MIN_VALUE) {
-                    ctx.fill(start, y, x, y + 1, color);
+                    out.add(y); out.add(start); out.add(x);
                     start = Integer.MIN_VALUE;
                 }
             }
         }
+        return out.stream().mapToInt(Integer::intValue).toArray();
+    }
+
+    private static void drawRuns(DrawContext ctx, float cx, float cy, int color, int[] runs) {
+        MatrixStack ms = ctx.getMatrices();
+        ms.push();
+        ms.translate(cx, cy, 0);
+        ms.scale(0.25f, 0.25f, 1f);
+        for (int i = 0; i < runs.length; i += 3) ctx.fill(runs[i + 1], runs[i], runs[i + 2], runs[i] + 1, color);
         ms.pop();
     }
 
-    public static void restartIcon(DrawContext ctx, float cx, float cy, int color) {
+    private static Mask restartMask() {
         float inner = 9.5f, outer = 14.5f, mid = (inner + outer) / 2f;
         double end = Math.toRadians(60);
         float px = (float) (mid * Math.cos(end)), py = (float) (-mid * Math.sin(end));
@@ -115,22 +130,35 @@ public final class Draw {
         float[] a = { px + nx * 7.5f, py + ny * 7.5f };
         float[] b = { px - nx * 7.5f, py - ny * 7.5f };
         float[] c = { px + tx * 8f, py + ty * 8f };
-        mask(ctx, cx, cy, 18, color, (x, y) -> {
+        return (x, y) -> {
             float d = (float) Math.sqrt(x * x + y * y);
             double deg = Math.toDegrees(Math.atan2(-y, x));
             if (deg < 0) deg += 360;
             boolean ring = d >= inner && d <= outer && deg >= 60 && deg <= 350;
             return ring || inTriangle(x, y, a, b, c);
-        });
+        };
+    }
+
+    public static void playIcon(DrawContext ctx, int cx, int cy, int color) {
+        for (int i = 0; i < 4; i++) ctx.fill(cx - 2 + i, cy - 3 + i, cx - 1 + i, cy + 4 - i, color);
+    }
+
+    public static void pauseIcon(DrawContext ctx, int cx, int cy, int color) {
+        ctx.fill(cx - 3, cy - 3, cx - 1, cy + 4, color);
+        ctx.fill(cx + 1, cy - 3, cx + 3, cy + 4, color);
+    }
+
+    public static void restartIcon(DrawContext ctx, float cx, float cy, int color) {
+        drawRuns(ctx, cx, cy, color, RESTART_RUNS);
     }
 
     public static void editIcon(DrawContext ctx, float cx, float cy, int color) {
-        mask(ctx, cx, cy, 18, color, (x, y) -> {
-            float u = (x - y) * 0.7071f, v = Math.abs(x + y) * 0.7071f;
-            if (u >= -8 && u <= 8 && v <= 3.75f) return true;
-            if (u >= 10 && u <= 14 && v <= 3.75f) return true;
-            return u >= -15.5f && u <= -9.5f && v <= 3.75f * (u + 15.5f) / 6f;
-        });
+        drawRuns(ctx, cx, cy, color, EDIT_RUNS);
+    }
+
+    public static void tintedCard(DrawContext ctx, int x, int y, int w, int h, int color) {
+        round(ctx, x, y, w, h, (color & 0x00FFFFFF) | 0x1A000000);
+        ctx.fill(x, y + 1, x + 2, y + h - 1, color);
     }
 
     private static boolean inTriangle(float x, float y, float[] a, float[] b, float[] c) {
