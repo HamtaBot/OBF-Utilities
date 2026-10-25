@@ -1,5 +1,7 @@
 package com.hamtabot.obfutilities.timer;
 
+import com.hamtabot.obfutilities.ui.HudPos;
+
 public class TimerEntry {
 
     public enum Type {
@@ -20,6 +22,7 @@ public class TimerEntry {
     public boolean finished      = false;
     public boolean showOnScreen  = false;
     public int     x = 10, y = 60;
+    public HudPos  pos = new HudPos();
     public float   scale = 1f;
 
     public TimerEntry() {}

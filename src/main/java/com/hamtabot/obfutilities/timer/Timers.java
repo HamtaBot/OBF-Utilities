@@ -89,9 +89,8 @@ public final class Timers {
     private static int[] bounds(TimerEntry t, int baseWidth) {
         MinecraftClient client = MinecraftClient.getInstance();
         int w = Math.round(baseWidth * t.scale), h = Math.round(H * t.scale);
-        int x = Math.max(0, Math.min(t.x, client.getWindow().getScaledWidth()  - w));
-        int y = Math.max(0, Math.min(t.y, client.getWindow().getScaledHeight() - h));
-        return new int[]{ x, y, w, h };
+        int[] p = t.pos.resolve(w, h, t.x, t.y);
+        return new int[]{ p[0], p[1], w, h };
     }
 
     public static boolean isInResizeGrip(int index, double mx, double my) {

@@ -14,6 +14,7 @@ public class InventoryHud {
     private static final int PAD = 5, CELL = 18, PITCH = 19, COLS = 9, HOTBAR_GAP = 5;
     public static final int W = PAD * 2 + COLS * PITCH - 1;
     public static final int H = PAD * 2 + 4 * PITCH - 1 + HOTBAR_GAP;
+    public static final int DEFAULT_X = 10, DEFAULT_Y = 60;
     public static final float MIN_SCALE = 0.5f, MAX_SCALE = 2f;
 
     public static void render(DrawContext ctx, boolean editing) {
@@ -65,9 +66,8 @@ public class InventoryHud {
         MinecraftClient client = MinecraftClient.getInstance();
         ModConfig cfg = OBFUtilities.config;
         int w = Math.round(W * cfg.invHudScale), h = Math.round(H * cfg.invHudScale);
-        int x = Math.max(0, Math.min(cfg.invHudX, client.getWindow().getScaledWidth()  - w));
-        int y = Math.max(0, Math.min(cfg.invHudY, client.getWindow().getScaledHeight() - h));
-        return new int[]{ x, y, w, h };
+        int[] p = cfg.invHudPos.resolve(w, h, DEFAULT_X, DEFAULT_Y);
+        return new int[]{ p[0], p[1], w, h };
     }
 
     public static boolean isMouseOver(double mx, double my) {
@@ -83,8 +83,8 @@ public class InventoryHud {
     }
 
     public static void setPos(int x, int y) {
-        OBFUtilities.config.invHudX = x;
-        OBFUtilities.config.invHudY = y;
+        int[] b = bounds();
+        OBFUtilities.config.invHudPos.set(x, y, b[2], b[3]);
     }
 
     public static void setScale(float s) {
