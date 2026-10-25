@@ -24,7 +24,9 @@ import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 
@@ -46,6 +48,8 @@ public class OBFHud {
     private static final ItemStack ICON_AFK    = new ItemStack(Items.RED_BED);
 
     private final Map<String, ItemStack> customIcons = new HashMap<>();
+    // items and the logo flush the buffer themselves, so they are drawn after the batched fills/text
+    private final List<Runnable> deferred = new ArrayList<>();
 
     private static final Path POS_FILE =Paths.get("obfutilities_hud_pos.properties");
 
@@ -74,6 +78,12 @@ public class OBFHud {
         posX = p[0];
         posY = p[1];
 
+        deferred.clear();
+        ctx.draw(() -> renderPanel(ctx, tr, cfg, pw, ph, editing));
+        ctx.draw(() -> deferred.forEach(Runnable::run));
+    }
+
+    private void renderPanel(DrawContext ctx, TextRenderer tr, ModConfig cfg, int pw, int ph, boolean editing) {
         Draw.shadow(ctx, posX, posY, pw, ph);
         Draw.card(ctx, posX, posY, pw, ph, Theme.WINDOW, Theme.WINDOW_BORDER);
         drawHeader(ctx, tr, pw);
@@ -107,7 +117,8 @@ public class OBFHud {
         Draw.round(ctx, posX + 1, posY + 1, pw - 2, hh, Theme.HEADER);
         Draw.accentLine(ctx, posX + 1, posY + hh, pw - 2);
 
-        Draw.brand(ctx, tr, posX + s(PADDING), posY, hh, s(LOGO_SIZE), s(5));
+        int bx0 = posX + s(PADDING), by0 = posY;
+        deferred.add(() -> Draw.brand(ctx, tr, bx0, by0, hh, s(LOGO_SIZE), s(5)));
 
         int textY = posY + (hh - 8) / 2 + 1;
         String time = Format.duration(System.currentTimeMillis() - SessionStats.getSessionStartTime());
@@ -127,7 +138,8 @@ public class OBFHud {
         int tx = left + s(8), y = ty + s(4);
         String rate = counter.getRate() > 0f ? String.format("%.1f/s", counter.getRate()) : null;
         int rateW = rate != null ? tr.getWidth(rate) + s(6) : 0;
-        Draw.item(ctx, icon, tx, y - 1, ICON);
+        int iy = y - 1;
+        deferred.add(() -> Draw.item(ctx, icon, tx, iy, ICON));
         ctx.drawText(tr, Draw.ellipsize(tr, label, right - tx - ICON_W - rateW), tx + ICON_W, y, color, false);
         if (rate != null) ctx.drawText(tr, rate, right - tr.getWidth(rate), y, Theme.ACCENT, false);
         y += s(11);
@@ -152,7 +164,8 @@ public class OBFHud {
         ctx.fill(left + 1, ty + s(3), left + 3, ty + h - s(3), Theme.PURPLE);
 
         int y = ty + (h - 8) / 2 + 1;
-        Draw.item(ctx, ICON_AD, left + s(8), y - 1, ICON);
+        int iy = y - 1;
+        deferred.add(() -> Draw.item(ctx, ICON_AD, left + s(8), iy, ICON));
         ctx.drawText(tr, "Prochaine pub", left + s(8) + ICON_W, y, Theme.PURPLE, false);
         String sv = ok ? "Disponible !" : Format.countdown(AdTimer.getRemainingMs());
         ctx.drawText(tr, sv, right - tr.getWidth(sv), y, ok ? Theme.SUCCESS : Theme.WARNING, false);
@@ -167,7 +180,8 @@ public class OBFHud {
         ctx.fill(left + 1, ty + s(3), left + 3, ty + h - s(3), Theme.WARNING);
 
         int y = ty + (h - 8) / 2 + 1;
-        Draw.item(ctx, ICON_AFK, left + s(8), y - 1, ICON);
+        int iy = y - 1;
+        deferred.add(() -> Draw.item(ctx, ICON_AFK, left + s(8), iy, ICON));
         ctx.drawText(tr, active ? "Temps AFK (en cours)" : "Temps AFK", left + s(8) + ICON_W, y, Theme.WARNING, false);
         String sv = Format.duration(AfkTimer.getElapsedMs());
         ctx.drawText(tr, sv, right - tr.getWidth(sv), y, active ? Theme.SUCCESS : Theme.TEXT_MUTED, false);
