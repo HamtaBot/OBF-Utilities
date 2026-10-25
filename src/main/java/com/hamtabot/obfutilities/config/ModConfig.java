@@ -50,6 +50,7 @@ public class ModConfig {
     public boolean disableChestAnimation = false;
     public boolean hideItemFrames        = false;
     public boolean disableSpawnerAnimation = false;
+    public float   heldItemScale         = 1.0f;
 
     public List<WarpBind> warps = new ArrayList<>();
 
@@ -141,6 +142,7 @@ public class ModConfig {
         if (adMessage == null) adMessage = "";
         if (afkDimension == null) afkDimension = "minecraft:overworld";
         scaleHud = clampScale(scaleHud);
+        heldItemScale = Math.max(0f, Math.min(1f, heldItemScale));
     }
 
     public static float clampScale(float v) {

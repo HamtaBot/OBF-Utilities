@@ -109,7 +109,10 @@ public class ScrollList {
     }
 
     public boolean mouseDragged(double mx, double my) {
-        if (!draggingBar) return false;
+        if (!draggingBar) {
+            for (Component c : components) if (c.mouseDragged(mx, my)) return true;
+            return false;
+        }
         int thumbH = thumb(0)[1];
         float ratio = maxScroll() / (float) Math.max(1, height - thumbH);
         target = (float) Math.max(0, Math.min(maxScroll(), dragStartScroll + (my - dragStartY) * ratio));
@@ -117,7 +120,10 @@ public class ScrollList {
         return true;
     }
 
-    public void mouseReleased() { draggingBar = false; }
+    public void mouseReleased() {
+        draggingBar = false;
+        for (Component c : components) c.mouseReleased();
+    }
 
     public boolean mouseScrolled(double mx, double my, double amount) {
         if (!Draw.inside(mx, my, x, y, width, height)) return false;

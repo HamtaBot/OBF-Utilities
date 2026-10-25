@@ -15,6 +15,7 @@
     "SpriteContentsAccessor",
     "HideArmorMixin",
     "HideHeldItemMixin",
+    "HeldItemScaleMixin",
     "HideHeadItemMixin",
     "NoParticlesMixin",
     "NoChestAnimationMixin",
