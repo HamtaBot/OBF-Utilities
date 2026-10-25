@@ -31,35 +31,49 @@ public class InventoryHud {
         ctx.getMatrices().translate(b[0], b[1], 0);
         ctx.getMatrices().scale(cfg.invHudScale, cfg.invHudScale, 1f);
 
-        if (op > 0f) {
-            Draw.card(ctx, 0, 0, W, h, alpha(Theme.WINDOW, op), alpha(Theme.WINDOW_BORDER, op));
-            if (cfg.invHudShowHotbar) {
-                int lineY = PAD + 3 * PITCH - 1 + HOTBAR_GAP / 2;
-                ctx.fill(PAD, lineY, W - PAD, lineY + 1, alpha(Theme.DIVIDER, op));
+        // fill/drawText flush the buffer on every call unless wrapped in ctx.draw(Runnable),
+        // so backgrounds, items and overlays are each drawn in their own batch
+        ctx.draw(() -> {
+            if (op > 0f) {
+                Draw.card(ctx, 0, 0, W, h, alpha(Theme.WINDOW, op), alpha(Theme.WINDOW_BORDER, op));
+                if (cfg.invHudShowHotbar) {
+                    int lineY = PAD + 3 * PITCH - 1 + HOTBAR_GAP / 2;
+                    ctx.fill(PAD, lineY, W - PAD, lineY + 1, alpha(Theme.DIVIDER, op));
+                }
+                int surface = alpha(Theme.SURFACE, op), border = alpha(Theme.BORDER, op), accent = alpha(Theme.ACCENT, op);
+                for (int row = 0; row < rows; row++) {
+                    for (int col = 0; col < COLS; col++) {
+                        boolean selected = row == 3 && col == inv.selectedSlot;
+                        Draw.card(ctx, slotX(col), slotY(row), CELL, CELL, surface, selected ? accent : border);
+                    }
+                }
             }
-        }
-        if (editing) ctx.drawBorder(0, 0, W, h, Theme.ACCENT);
+            if (editing) ctx.drawBorder(0, 0, W, h, Theme.ACCENT);
+        });
 
         for (int row = 0; row < rows; row++) {
             for (int col = 0; col < COLS; col++) {
-                int slot = row < 3 ? 9 + row * COLS + col : col;
-                int sx = PAD + col * PITCH;
-                int sy = PAD + row * PITCH + (row == 3 ? HOTBAR_GAP : 0);
-                if (op > 0f) {
-                    boolean selected = row == 3 && col == inv.selectedSlot;
-                    Draw.card(ctx, sx, sy, CELL, CELL, alpha(Theme.SURFACE, op),
-                            alpha(selected ? Theme.ACCENT : Theme.BORDER, op));
-                }
-                ItemStack stack = inv.getStack(slot);
-                if (stack.isEmpty()) continue;
-                ctx.drawItem(stack, sx + 1, sy + 1);
-                ctx.drawItemInSlot(client.textRenderer, stack, sx + 1, sy + 1);
+                ItemStack stack = inv.getStack(slotIndex(row, col));
+                if (!stack.isEmpty()) ctx.drawItem(stack, slotX(col) + 1, slotY(row) + 1);
             }
         }
+
+        ctx.draw(() -> {
+            for (int row = 0; row < rows; row++) {
+                for (int col = 0; col < COLS; col++) {
+                    ItemStack stack = inv.getStack(slotIndex(row, col));
+                    if (!stack.isEmpty()) ctx.drawItemInSlot(client.textRenderer, stack, slotX(col) + 1, slotY(row) + 1);
+                }
+            }
+        });
         ctx.getMatrices().pop();
 
         if (editing) Draw.resizeGrip(ctx, b[0] + b[2], b[1] + b[3]);
     }
+
+    private static int slotIndex(int row, int col) { return row < 3 ? 9 + row * COLS + col : col; }
+    private static int slotX(int col) { return PAD + col * PITCH; }
+    private static int slotY(int row) { return PAD + row * PITCH + (row == 3 ? HOTBAR_GAP : 0); }
 
     private static int height() { return OBFUtilities.config.invHudShowHotbar ? H_FULL : H_MAIN; }
 
