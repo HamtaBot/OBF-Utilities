@@ -3,6 +3,7 @@ package com.hamtabot.obfutilities.config;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.hamtabot.obfutilities.timer.TimerEntry;
+import com.hamtabot.obfutilities.ui.HudPos;
 import com.hamtabot.obfutilities.util.JsonFiles;
 
 import java.nio.file.Path;
@@ -73,8 +74,7 @@ public class ModConfig {
     public float scaleHud = 1.0f;
 
     public boolean invHudEnabled = false;
-    public int     invHudX       = 10;
-    public int     invHudY       = 60;
+    public HudPos  invHudPos     = new HudPos();
     public float   invHudScale   = 1.0f;
     public float   invHudOpacity = 0.8f;
 
@@ -91,6 +91,9 @@ public class ModConfig {
     public int debugCoordsY        = 120;
     public int debugRamX           = 10;
     public int debugRamY           = 140;
+    public HudPos debugFpsPos      = new HudPos();
+    public HudPos debugCoordsPos   = new HudPos();
+    public HudPos debugRamPos      = new HudPos();
 
     public long adCooldownMs = 15 * 60 * 1000L;
     public String  adMessage      = "";
@@ -144,6 +147,11 @@ public class ModConfig {
         customBlocks.removeIf(e -> e == null || e.blockId == null);
         blockShades.removeIf(e -> e == null || e.blockId == null);
         timers.removeIf(Objects::isNull);
+        for (TimerEntry t : timers) if (t.pos == null) t.pos = new HudPos();
+        if (invHudPos == null) invHudPos = new HudPos();
+        if (debugFpsPos == null) debugFpsPos = new HudPos();
+        if (debugCoordsPos == null) debugCoordsPos = new HudPos();
+        if (debugRamPos == null) debugRamPos = new HudPos();
         warps.removeIf(w -> w == null || w.name == null || w.name.isBlank());
         if (adMessage == null) adMessage = "";
         if (afkDimension == null) afkDimension = "minecraft:overworld";

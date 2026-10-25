@@ -3,6 +3,7 @@ package com.hamtabot.obfutilities.debug;
 import com.hamtabot.obfutilities.OBFUtilities;
 import com.hamtabot.obfutilities.config.ModConfig;
 import com.hamtabot.obfutilities.ui.Draw;
+import com.hamtabot.obfutilities.ui.HudPos;
 import com.hamtabot.obfutilities.ui.Theme;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
@@ -96,10 +97,8 @@ public class DebugOverlay {
     }
 
     private static int[] bounds(Element e, int w) {
-        MinecraftClient client = MinecraftClient.getInstance();
-        int x = Math.max(0, Math.min(getX(e), client.getWindow().getScaledWidth()  - w));
-        int y = Math.max(0, Math.min(getY(e), client.getWindow().getScaledHeight() - H));
-        return new int[]{ x, y, w, H };
+        int[] p = pos(e).resolve(w, H, legacyX(e), legacyY(e));
+        return new int[]{ p[0], p[1], w, H };
     }
 
     public static boolean isEnabled(Element e) {
@@ -107,23 +106,26 @@ public class DebugOverlay {
         return switch (e) { case FPS -> c.debugShowFps; case COORDS -> c.debugShowCoords; case RAM -> c.debugShowRam; };
     }
 
-    private static int getX(Element e) {
+    private static HudPos pos(Element e) {
+        ModConfig c = OBFUtilities.config;
+        return switch (e) { case FPS -> c.debugFpsPos; case COORDS -> c.debugCoordsPos; case RAM -> c.debugRamPos; };
+    }
+
+    private static int legacyX(Element e) {
         ModConfig c = OBFUtilities.config;
         return switch (e) { case FPS -> c.debugFpsX; case COORDS -> c.debugCoordsX; case RAM -> c.debugRamX; };
     }
 
-    private static int getY(Element e) {
+    private static int legacyY(Element e) {
         ModConfig c = OBFUtilities.config;
         return switch (e) { case FPS -> c.debugFpsY; case COORDS -> c.debugCoordsY; case RAM -> c.debugRamY; };
     }
 
     public static void setPos(Element e, int x, int y) {
-        ModConfig c = OBFUtilities.config;
-        switch (e) {
-            case FPS    -> { c.debugFpsX = x;    c.debugFpsY = y; }
-            case COORDS -> { c.debugCoordsX = x; c.debugCoordsY = y; }
-            case RAM    -> { c.debugRamX = x;    c.debugRamY = y; }
-        }
+        int[] b = bounds(e, tr());
+        pos(e).set(x, y, b[2], b[3]);
     }
+
+    private static TextRenderer tr() { return MinecraftClient.getInstance().textRenderer; }
 
 }

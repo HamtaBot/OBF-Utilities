@@ -97,8 +97,8 @@ public class HudEditScreen extends Screen {
         for (int i = 0; i < Timers.all().size(); i++) {
             TimerEntry t = Timers.all().get(i);
             t.scale = 1f;
-            t.x = width - 10 - Timers.bounds(i)[2];
-            t.y = 10 + i * (Timers.H + 4);
+            int[] b = Timers.bounds(i);
+            t.pos.set(width - 10 - b[2], 10 + i * (Timers.H + 4), b[2], b[3]);
         }
     }
 
@@ -195,8 +195,7 @@ public class HudEditScreen extends Screen {
             int[] b = Timers.bounds(draggedTimer);
             int[] p = snap((int) mouseX - dragOffX, (int) mouseY - dragOffY, b[2], b[3]);
             TimerEntry t = Timers.all().get(draggedTimer);
-            t.x = p[0];
-            t.y = p[1];
+            t.pos.set(p[0], p[1], b[2], b[3]);
             return true;
         }
         if (draggingHud) {

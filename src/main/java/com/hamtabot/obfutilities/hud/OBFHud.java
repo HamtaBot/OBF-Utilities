@@ -10,6 +10,7 @@ import com.hamtabot.obfutilities.stats.SessionStats;
 import com.hamtabot.obfutilities.stats.StatCounter;
 import com.hamtabot.obfutilities.stats.StatsReader;
 import com.hamtabot.obfutilities.ui.Draw;
+import com.hamtabot.obfutilities.ui.HudPos;
 import com.hamtabot.obfutilities.ui.Theme;
 import com.hamtabot.obfutilities.util.Format;
 import net.minecraft.client.MinecraftClient;
@@ -50,6 +51,7 @@ public class OBFHud {
 
     private int posX = 10;
     private int posY = 10;
+    private final HudPos pos = new HudPos();
     private boolean visible = true;
 
     public OBFHud() { loadPosition(); }
@@ -68,8 +70,9 @@ public class OBFHud {
         int pw = getWidth();
         int ph = getHeight();
 
-        posX = Math.max(0, Math.min(posX, client.getWindow().getScaledWidth()  - pw));
-        posY = Math.max(0, Math.min(posY, client.getWindow().getScaledHeight() - ph));
+        int[] p = pos.resolve(pw, ph, posX, posY);
+        posX = p[0];
+        posY = p[1];
 
         Draw.shadow(ctx, posX, posY, pw, ph);
         Draw.card(ctx, posX, posY, pw, ph, Theme.WINDOW, Theme.WINDOW_BORDER);
@@ -208,7 +211,11 @@ public class OBFHud {
 
     public int  getPosX() { return posX; }
     public int  getPosY() { return posY; }
-    public void setPos(int x, int y) { posX = x; posY = y; }
+    public void setPos(int x, int y) {
+        pos.set(x, y, getWidth(), getHeight());
+        posX = x;
+        posY = y;
+    }
 
     public boolean isVisible()     { return visible; }
     public void    toggleVisible() { visible = !visible; }
@@ -217,6 +224,10 @@ public class OBFHud {
         Properties props = new Properties();
         props.setProperty("hud_x", String.valueOf(posX));
         props.setProperty("hud_y", String.valueOf(posY));
+        if (pos.isSet()) {
+            props.setProperty("hud_fx", String.valueOf(pos.x));
+            props.setProperty("hud_fy", String.valueOf(pos.y));
+        }
         try (OutputStream out = Files.newOutputStream(POS_FILE)) { props.store(out, "OBF HUD Position"); }
         catch (Exception e) { OBFUtilities.LOGGER.error("[OBF] "+e.getMessage()); }
     }
@@ -228,6 +239,8 @@ public class OBFHud {
             p.load(in);
             posX = Math.max(0, Math.min(Integer.parseInt(p.getProperty("hud_x", "10")), 7680));
             posY = Math.max(0, Math.min(Integer.parseInt(p.getProperty("hud_y", "10")), 4320));
+            pos.x = Float.parseFloat(p.getProperty("hud_fx", "-1"));
+            pos.y = Float.parseFloat(p.getProperty("hud_fy", "-1"));
         } catch (Exception e) { posX = 10; posY = 10; }
     }
 }
