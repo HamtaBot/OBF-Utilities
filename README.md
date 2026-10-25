@@ -19,7 +19,16 @@ Tes stats en temps réel, directement à l'écran :
 
 Les totaux serveur sont récupérés automatiquement à la connexion, sans polluer le chat. Un bouton permet de les actualiser (une fois toutes les 15 min).
 
-> Le HUD se déplace à la souris et se redimensionne par le coin en bas à droite. Il s'aimante aux bords et au centre de l'écran.
+> Le HUD se déplace à la souris et se redimensionne par le coin en bas à droite. Il s'aimante aux bords et au centre de l'écran, et garde sa place quand tu changes la taille de la fenêtre.
+
+## 🎒 HUD Inventaire
+Ton inventaire affiché à l'écran en temps réel, sans avoir à l'ouvrir :
+
+- Les 27 slots de l'inventaire, avec quantités et durabilité
+- **Hotbar** affichable ou non en dessous
+- **Opacité réglable** : opaque dans le style du mod, ou transparent pour ne voir que les items
+- **Taille réglable** de 50 % à 200 %
+- Déplaçable à la souris comme le reste du HUD
 
 ## ⏰ Publicité
 - Enregistre ta pub dans le mod et envoie-la en un clic
@@ -50,6 +59,7 @@ Prend automatiquement le meilleur outil de ta hotbar selon le bloc visé, et ton
 - **Désactiver toutes les particules**
 - **Couper l'animation d'ouverture** des coffres, coffres de l'Ender et shulker boxes
 - **Cacher le mob qui tourne** dans les spawners
+- **Réduire l'objet en main** en vue à la première personne, de taille normale jusqu'à invisible
 
 ## 🌀 Macro Warps
 - À chaque connexion, le mod récupère la liste des `/warp` du serveur
