@@ -22,6 +22,10 @@ public abstract class Component {
 
     public boolean mouseClicked(double mouseX, double mouseY, int button) { return false; }
 
+    public boolean mouseDragged(double mouseX, double mouseY) { return false; }
+
+    public void mouseReleased() {}
+
     public boolean keyPressed(int keyCode) { return false; }
 
     public boolean charTyped(char chr, int modifiers) { return false; }

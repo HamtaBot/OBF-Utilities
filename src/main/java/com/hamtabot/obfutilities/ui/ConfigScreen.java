@@ -281,6 +281,11 @@ public class ConfigScreen extends Screen {
         c.add(new ToggleRow("Cacher les cadres", "Les cadres deviennent invisibles, mais l'objet ou la carte qu'ils contiennent reste affiché.",
                 () -> cfg.hideItemFrames, v -> cfg.hideItemFrames = v));
 
+        c.add(new SectionTitle("Vue"));
+        c.add(new SliderRow("Taille des objets en main", "Réduit la taille de l'objet que tu tiens en vue à la première personne, jusqu'à le rendre invisible.",
+                0, 100, () -> Math.round(cfg.heldItemScale * 100), v -> cfg.heldItemScale = v / 100f,
+                v -> v == 0 ? "Invisible" : v + " %"));
+
         c.add(new SectionTitle("Effets"));
         c.add(new ToggleRow("Désactiver les particules", "Supprime toutes les particules du jeu : explosions, potions, blocs cassés, fumée...",
                 () -> cfg.disableParticles, v -> cfg.disableParticles = v));
