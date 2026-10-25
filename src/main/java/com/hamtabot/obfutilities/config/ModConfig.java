@@ -72,6 +72,12 @@ public class ModConfig {
 
     public float scaleHud = 1.0f;
 
+    public boolean invHudEnabled = false;
+    public int     invHudX       = 10;
+    public int     invHudY       = 60;
+    public float   invHudScale   = 1.0f;
+    public float   invHudOpacity = 0.8f;
+
     public int serverTotalPlaced = -1;
     public int serverTotalMined  = -1;
     public int serverTotalKills  = -1;
@@ -143,6 +149,8 @@ public class ModConfig {
         if (afkDimension == null) afkDimension = "minecraft:overworld";
         scaleHud = clampScale(scaleHud);
         heldItemScale = Math.max(0f, Math.min(1f, heldItemScale));
+        invHudScale = com.hamtabot.obfutilities.hud.InventoryHud.clampScale(invHudScale);
+        invHudOpacity = Math.max(0f, Math.min(1f, invHudOpacity));
     }
 
     public static float clampScale(float v) {
