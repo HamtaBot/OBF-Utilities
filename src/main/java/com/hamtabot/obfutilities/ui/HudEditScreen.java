@@ -3,6 +3,7 @@ package com.hamtabot.obfutilities.ui;
 import com.hamtabot.obfutilities.OBFUtilities;
 import com.hamtabot.obfutilities.config.ModConfig;
 import com.hamtabot.obfutilities.debug.DebugOverlay;
+import com.hamtabot.obfutilities.hud.InventoryHud;
 import com.hamtabot.obfutilities.hud.OBFHud;
 import com.hamtabot.obfutilities.timer.TimerEntry;
 import com.hamtabot.obfutilities.timer.Timers;
@@ -21,6 +22,7 @@ public class HudEditScreen extends Screen {
     private DebugOverlay.Element draggedOverlay = null;
     private int draggedTimer = -1, resizingTimer = -1;
     private boolean draggingHud = false, resizingHud = false;
+    private boolean draggingInv = false, resizingInv = false;
     private int dragOffX, dragOffY;
     private double resizeStartX;
     private float resizeStartScale;
@@ -40,6 +42,7 @@ public class HudEditScreen extends Screen {
         if (guideX >= 0) ctx.fill(guideX, 0, guideX + 1, height, GUIDE_COLOR);
         if (guideY >= 0) ctx.fill(0, guideY, width, guideY + 1, GUIDE_COLOR);
 
+        InventoryHud.render(ctx, true);
         hud.render(ctx, true);
         if (draggingHud || resizingHud || (draggedOverlay == null && hud.isMouseOver(mouseX, mouseY))) {
             ctx.drawBorder(hud.getPosX() - 1, hud.getPosY() - 1, hud.getWidth() + 2, hud.getHeight() + 2, Theme.ACCENT);
@@ -49,7 +52,7 @@ public class HudEditScreen extends Screen {
 
         renderToolbar(ctx, mouseX, mouseY);
 
-        float scale = resizingHud ? OBFUtilities.config.scaleHud : resizingTimer >= 0 ? Timers.all().get(resizingTimer).scale : -1;
+        float scale = resizingHud ? OBFUtilities.config.scaleHud : resizingInv ? OBFUtilities.config.invHudScale : resizingTimer >= 0 ? Timers.all().get(resizingTimer).scale : -1;
         if (scale > 0) ctx.drawTooltip(textRenderer, Text.literal(Math.round(scale * 100) + " %"), mouseX, mouseY);
     }
 
@@ -86,6 +89,8 @@ public class HudEditScreen extends Screen {
         ModConfig cfg = OBFUtilities.config;
         cfg.scaleHud = 1.0f;
         hud.setPos(10, 10);
+        cfg.invHudScale = 1.0f;
+        InventoryHud.setPos(10, 60);
         DebugOverlay.setPos(DebugOverlay.Element.FPS,    10, height - 80);
         DebugOverlay.setPos(DebugOverlay.Element.COORDS, 10, height - 62);
         DebugOverlay.setPos(DebugOverlay.Element.RAM,    10, height - 44);
@@ -138,6 +143,12 @@ public class HudEditScreen extends Screen {
                 return true;
             }
         }
+        if (InventoryHud.isInResizeGrip(mouseX, mouseY)) {
+            resizingInv = true;
+            resizeStartX = mouseX;
+            resizeStartScale = OBFUtilities.config.invHudScale;
+            return true;
+        }
         if (hud.isInResizeGrip(mouseX, mouseY)) {
             resizingHud = true;
             resizeStartX = mouseX;
@@ -150,6 +161,13 @@ public class HudEditScreen extends Screen {
             dragOffY = (int) mouseY - hud.getPosY();
             return true;
         }
+        if (InventoryHud.isMouseOver(mouseX, mouseY)) {
+            int[] b = InventoryHud.bounds();
+            draggingInv = true;
+            dragOffX = (int) mouseX - b[0];
+            dragOffY = (int) mouseY - b[1];
+            return true;
+        }
         return super.mouseClicked(mouseX, mouseY, button);
     }
 
@@ -157,6 +175,16 @@ public class HudEditScreen extends Screen {
     public boolean mouseDragged(double mouseX, double mouseY, int button, double dx, double dy) {
         if (resizingHud) {
             OBFUtilities.config.scaleHud = ModConfig.clampScale(resizeStartScale + (float) (mouseX - resizeStartX) / 200f);
+            return true;
+        }
+        if (resizingInv) {
+            InventoryHud.setScale(resizeStartScale + (float) (mouseX - resizeStartX) / 200f);
+            return true;
+        }
+        if (draggingInv) {
+            int[] b = InventoryHud.bounds();
+            int[] p = snap((int) mouseX - dragOffX, (int) mouseY - dragOffY, b[2], b[3]);
+            InventoryHud.setPos(p[0], p[1]);
             return true;
         }
         if (resizingTimer >= 0) {
@@ -206,6 +234,7 @@ public class HudEditScreen extends Screen {
     @Override
     public boolean mouseReleased(double mouseX, double mouseY, int button) {
         draggingHud = resizingHud = false;
+        draggingInv = resizingInv = false;
         draggedOverlay = null;
         draggedTimer = resizingTimer = -1;
         guideX = guideY = -1;
@@ -215,6 +244,10 @@ public class HudEditScreen extends Screen {
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double amount) {
         int timer = timerAt(mouseX, mouseY);
+        if (timer < 0 && InventoryHud.isMouseOver(mouseX, mouseY)) {
+            InventoryHud.setScale(OBFUtilities.config.invHudScale + (float) amount * 0.1f);
+            return true;
+        }
         if (timer < 0) return super.mouseScrolled(mouseX, mouseY, amount);
         TimerEntry t = Timers.all().get(timer);
         t.setScale(t.scale + (float) amount * 0.1f);

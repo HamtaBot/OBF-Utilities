@@ -3,6 +3,7 @@ package com.hamtabot.obfutilities.ui;
 import com.hamtabot.obfutilities.OBFUtilities;
 import com.hamtabot.obfutilities.blockshade.BlockShade;
 import com.hamtabot.obfutilities.config.ModConfig;
+import com.hamtabot.obfutilities.hud.InventoryHud;
 import com.hamtabot.obfutilities.input.KeyRemap;
 import com.hamtabot.obfutilities.input.Keybinds;
 import com.hamtabot.obfutilities.stats.AdTimer;
@@ -45,6 +46,7 @@ public class ConfigScreen extends Screen {
         BLOCKS   (Items.GRASS_BLOCK,     "Blocs suivis",  "Compte des blocs précis en plus des stats globales"),
         AUTOTOOL (Items.DIAMOND_PICKAXE, "AutoTool",      "Prend automatiquement le bon outil de la hotbar"),
         VISUALS  (Items.TORCH,           "Visuel",        "Luminosité et overlays d'informations"),
+        INVENTORY(Items.CHEST,           "HUD Inventaire", "Ton inventaire affiché à l'écran en temps réel"),
         OPTIMIZE (Items.FEATHER,         "Optimisations", "Allège le rendu pour gagner des FPS"),
         SHADES   (Items.COAL_BLOCK,      "Blocs sombres", "Applique une texture sombre aux blocs de ton choix"),
         CONTROLS (Items.LEVER,           "Contrôles",     "Drop sécurisé et touches de remplacement"),
@@ -124,6 +126,7 @@ public class ConfigScreen extends Screen {
             case BLOCKS    -> buildBlocks(c);
             case AUTOTOOL  -> buildAutoTool(c);
             case VISUALS   -> buildVisuals(c);
+            case INVENTORY -> buildInventoryHud(c);
             case OPTIMIZE  -> buildOptimizations(c);
             case SHADES    -> buildShades(c);
             case CONTROLS  -> buildControls(c);
@@ -272,6 +275,22 @@ public class ConfigScreen extends Screen {
                 () -> cfg.debugShowRam, v -> cfg.debugShowRam = v));
         c.add(new ButtonRow("Placer les overlays", "Glisse chaque overlay où tu veux sur l'écran.",
                 "Modifier", Draw.ButtonStyle.PRIMARY, this::openHudEditor));
+    }
+
+    private void buildInventoryHud(List<Component> c) {
+        c.add(new ToggleRow("Activer", "Affiche ton inventaire et ta hotbar à l'écran, mis à jour en temps réel.",
+                () -> cfg.invHudEnabled, v -> cfg.invHudEnabled = v));
+        c.add(new ButtonRow("Placer l'inventaire", "Glisse-le où tu veux sur l'écran, coin en bas à droite ou molette pour la taille.",
+                "Modifier", Draw.ButtonStyle.PRIMARY, this::openHudEditor));
+
+        c.add(new SectionTitle("Apparence"));
+        c.add(new SliderRow("Opacité du fond", "À 0, seuls les objets restent visibles.",
+                0, 100, () -> Math.round(cfg.invHudOpacity * 100), v -> cfg.invHudOpacity = v / 100f,
+                v -> v == 0 ? "Transparent" : v == 100 ? "Opaque" : v + " %"));
+        c.add(new SliderRow("Taille", "Taille du HUD inventaire à l'écran.",
+                Math.round(InventoryHud.MIN_SCALE * 100), Math.round(InventoryHud.MAX_SCALE * 100),
+                () -> Math.round(cfg.invHudScale * 100), v -> InventoryHud.setScale(v / 100f),
+                v -> v + " %"));
     }
 
     private void buildOptimizations(List<Component> c) {

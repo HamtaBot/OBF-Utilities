@@ -4,6 +4,7 @@ import com.hamtabot.obfutilities.blockshade.BlockShade;
 import com.hamtabot.obfutilities.config.ModConfig;
 import com.hamtabot.obfutilities.debug.DebugOverlay;
 import com.hamtabot.obfutilities.fullbright.FullBright;
+import com.hamtabot.obfutilities.hud.InventoryHud;
 import com.hamtabot.obfutilities.hud.OBFHud;
 import com.hamtabot.obfutilities.input.KeyRemap;
 import com.hamtabot.obfutilities.input.Keybinds;
@@ -54,6 +55,7 @@ public class OBFUtilities implements ClientModInitializer {
 
         HudRenderCallback.EVENT.register((ctx, delta) -> {
             if (MinecraftClient.getInstance().currentScreen instanceof HudEditScreen) return;
+            InventoryHud.render(ctx, false);
             hud.render(ctx, false);
             DebugOverlay.render(ctx, false);
             Timers.render(ctx, false);
