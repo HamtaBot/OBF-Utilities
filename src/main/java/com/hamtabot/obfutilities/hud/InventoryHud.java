@@ -13,7 +13,8 @@ public class InventoryHud {
 
     private static final int PAD = 5, CELL = 18, PITCH = 19, COLS = 9, HOTBAR_GAP = 5;
     public static final int W = PAD * 2 + COLS * PITCH - 1;
-    public static final int H = PAD * 2 + 4 * PITCH - 1 + HOTBAR_GAP;
+    private static final int H_MAIN = PAD * 2 + 3 * PITCH - 1;
+    private static final int H_FULL = H_MAIN + PITCH + HOTBAR_GAP;
     public static final int DEFAULT_X = 10, DEFAULT_Y = 60;
     public static final float MIN_SCALE = 0.5f, MAX_SCALE = 2f;
 
@@ -24,19 +25,22 @@ public class InventoryHud {
         PlayerInventory inv = client.player.getInventory();
         float op = cfg.invHudOpacity;
         int[] b = bounds();
+        int h = height(), rows = cfg.invHudShowHotbar ? 4 : 3;
 
         ctx.getMatrices().push();
         ctx.getMatrices().translate(b[0], b[1], 0);
         ctx.getMatrices().scale(cfg.invHudScale, cfg.invHudScale, 1f);
 
         if (op > 0f) {
-            Draw.card(ctx, 0, 0, W, H, alpha(Theme.WINDOW, op), alpha(Theme.WINDOW_BORDER, op));
-            int lineY = PAD + 3 * PITCH - 1 + HOTBAR_GAP / 2;
-            ctx.fill(PAD, lineY, W - PAD, lineY + 1, alpha(Theme.DIVIDER, op));
+            Draw.card(ctx, 0, 0, W, h, alpha(Theme.WINDOW, op), alpha(Theme.WINDOW_BORDER, op));
+            if (cfg.invHudShowHotbar) {
+                int lineY = PAD + 3 * PITCH - 1 + HOTBAR_GAP / 2;
+                ctx.fill(PAD, lineY, W - PAD, lineY + 1, alpha(Theme.DIVIDER, op));
+            }
         }
-        if (editing) ctx.drawBorder(0, 0, W, H, Theme.ACCENT);
+        if (editing) ctx.drawBorder(0, 0, W, h, Theme.ACCENT);
 
-        for (int row = 0; row < 4; row++) {
+        for (int row = 0; row < rows; row++) {
             for (int col = 0; col < COLS; col++) {
                 int slot = row < 3 ? 9 + row * COLS + col : col;
                 int sx = PAD + col * PITCH;
@@ -57,6 +61,8 @@ public class InventoryHud {
         if (editing) Draw.resizeGrip(ctx, b[0] + b[2], b[1] + b[3]);
     }
 
+    private static int height() { return OBFUtilities.config.invHudShowHotbar ? H_FULL : H_MAIN; }
+
     private static int alpha(int color, float factor) {
         int a = Math.round((color >>> 24) * factor);
         return (a << 24) | (color & 0xFFFFFF);
@@ -65,7 +71,7 @@ public class InventoryHud {
     public static int[] bounds() {
         MinecraftClient client = MinecraftClient.getInstance();
         ModConfig cfg = OBFUtilities.config;
-        int w = Math.round(W * cfg.invHudScale), h = Math.round(H * cfg.invHudScale);
+        int w = Math.round(W * cfg.invHudScale), h = Math.round(height() * cfg.invHudScale);
         int[] p = cfg.invHudPos.resolve(w, h, DEFAULT_X, DEFAULT_Y);
         return new int[]{ p[0], p[1], w, h };
     }

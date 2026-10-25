@@ -77,6 +77,7 @@ public class ModConfig {
     public HudPos  invHudPos     = new HudPos();
     public float   invHudScale   = 1.0f;
     public float   invHudOpacity = 0.8f;
+    public boolean invHudShowHotbar = true;
 
     public int serverTotalPlaced = -1;
     public int serverTotalMined  = -1;

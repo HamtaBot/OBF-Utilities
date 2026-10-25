@@ -280,6 +280,8 @@ public class ConfigScreen extends Screen {
     private void buildInventoryHud(List<Component> c) {
         c.add(new ToggleRow("Activer", "Affiche ton inventaire et ta hotbar à l'écran, mis à jour en temps réel.",
                 () -> cfg.invHudEnabled, v -> cfg.invHudEnabled = v));
+        c.add(new ToggleRow("Afficher la hotbar", "Ajoute tes 9 slots de la barre principale sous l'inventaire. Désactive-le si tu la vois déjà en bas de l'écran.",
+                () -> cfg.invHudShowHotbar, v -> cfg.invHudShowHotbar = v));
         c.add(new ButtonRow("Placer l'inventaire", "Glisse-le où tu veux sur l'écran, coin en bas à droite ou molette pour la taille.",
                 "Modifier", Draw.ButtonStyle.PRIMARY, this::openHudEditor));
 
