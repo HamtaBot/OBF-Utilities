@@ -11,6 +11,9 @@ public class ClientBrandMixin {
 
     @Inject(method = "getClientModName", at = @At("RETURN"), cancellable = true, remap = false, require = 0)
     private static void addModName(CallbackInfoReturnable<String> cir) {
-        cir.setReturnValue(cir.getReturnValue() + " (OBF Utilities)");
+        String brand = cir.getReturnValue();
+        // Les anticheats vérifient le format exact du brand Lunar : le modifier provoque un kick
+        if (brand.toLowerCase().contains("lunar")) return;
+        cir.setReturnValue(brand + " (OBF Utilities)");
     }
 }
