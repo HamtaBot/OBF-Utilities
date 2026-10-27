@@ -1,5 +1,6 @@
 package com.hamtabot.obfutilities.mixin;
 
+import com.hamtabot.obfutilities.kit.KitTracker;
 import com.hamtabot.obfutilities.stats.AdTimer;
 import com.hamtabot.obfutilities.stats.ServerStats;
 import net.minecraft.client.network.ClientPlayNetworkHandler;
@@ -15,6 +16,11 @@ public class ChatMixin {
     @Inject(method = "sendChatMessage", at = @At("HEAD"))
     private void onSendChatMessage(String message, CallbackInfo ci) {
         AdTimer.onChatSent(message);
+    }
+
+    @Inject(method = "sendChatCommand", at = @At("HEAD"))
+    private void onSendChatCommand(String command, CallbackInfo ci) {
+        KitTracker.onCommandSent(command);
     }
 
     @Inject(method = "onGameMessage", at = @At("HEAD"), cancellable = true)
