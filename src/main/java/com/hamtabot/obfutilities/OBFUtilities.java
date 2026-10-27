@@ -7,6 +7,8 @@ import com.hamtabot.obfutilities.fullbright.FullBright;
 import com.hamtabot.obfutilities.hud.InventoryHud;
 import com.hamtabot.obfutilities.hud.OBFHud;
 import com.hamtabot.obfutilities.input.KeyRemap;
+import com.hamtabot.obfutilities.kit.KitHud;
+import com.hamtabot.obfutilities.kit.KitTracker;
 import com.hamtabot.obfutilities.input.Keybinds;
 import com.hamtabot.obfutilities.stats.AdTimer;
 import com.hamtabot.obfutilities.stats.AfkTimer;
@@ -43,6 +45,7 @@ public class OBFUtilities implements ClientModInitializer {
         hud = new OBFHud();
         SessionStore.load();
         AfkTimer.load();
+        KitTracker.load();
 
         Keybinds.register();
         StorageUnit.register();
@@ -59,6 +62,7 @@ public class OBFUtilities implements ClientModInitializer {
             hud.render(ctx, false);
             DebugOverlay.render(ctx, false);
             Timers.render(ctx, false);
+            KitHud.render(ctx, false);
         });
 
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
@@ -75,6 +79,7 @@ public class OBFUtilities implements ClientModInitializer {
             Keybinds.tick(client);
             WarpMacros.tick(client);
             StorageUnit.tick(client);
+            KitTracker.tick(client);
         });
     }
 

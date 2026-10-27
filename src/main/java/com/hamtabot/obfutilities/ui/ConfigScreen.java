@@ -6,6 +6,7 @@ import com.hamtabot.obfutilities.config.ModConfig;
 import com.hamtabot.obfutilities.hud.InventoryHud;
 import com.hamtabot.obfutilities.input.KeyRemap;
 import com.hamtabot.obfutilities.input.Keybinds;
+import com.hamtabot.obfutilities.kit.KitTracker;
 import com.hamtabot.obfutilities.stats.AdTimer;
 import com.hamtabot.obfutilities.stats.AfkTimer;
 import com.hamtabot.obfutilities.stats.ServerStats;
@@ -43,6 +44,7 @@ public class ConfigScreen extends Screen {
         ADS      (Items.PAPER,           "Publicité",     "Enregistre ta pub et envoie-la en un clic"),
         AFK      (Items.RED_BED,         "AFK Timer",     "Temps passé dans ta zone AFK"),
         TIMERS   (Items.CLOCK,           "Timers",        "Chronos et comptes à rebours, affichables à l'écran"),
+        KITS     (Items.ENDER_CHEST,     "Kits",          "Prévient quand un kit du /kit est disponible"),
         BLOCKS   (Items.GRASS_BLOCK,     "Blocs suivis",  "Compte des blocs précis en plus des stats globales"),
         AUTOTOOL (Items.DIAMOND_PICKAXE, "AutoTool",      "Prend automatiquement le bon outil de la hotbar"),
         VISUALS  (Items.TORCH,           "Visuel",        "Luminosité et overlays d'informations"),
@@ -123,6 +125,7 @@ public class ConfigScreen extends Screen {
             case ADS       -> buildAds(c);
             case AFK       -> buildAfk(c);
             case TIMERS    -> buildTimers(c);
+            case KITS      -> buildKits(c);
             case BLOCKS    -> buildBlocks(c);
             case AUTOTOOL  -> buildAutoTool(c);
             case VISUALS   -> buildVisuals(c);
@@ -230,6 +233,29 @@ public class ConfigScreen extends Screen {
             c.add(new SectionTitle("Légende"));
             c.add(new TimerLegend());
         }
+    }
+
+    private void buildKits(List<Component> c) {
+        c.add(new ToggleRow("Activer", "Suit les cooldowns des kits du /kit, même jeu fermé, et met à jour le compteur à chaque kit récupéré.",
+                () -> cfg.kitsEnabled, v -> cfg.kitsEnabled = v));
+        c.add(new ToggleRow("Message à l'écran", "Affiche « Kit disponible » au milieu de l'écran dès qu'un kit peut être récupéré.",
+                () -> cfg.kitTitleEnabled, v -> cfg.kitTitleEnabled = v));
+        c.add(new ButtonRow("Calculer les cooldowns", "Ouvre le /kit, lit le temps restant de chaque kit puis le referme. À faire la première fois.",
+                () -> KitTracker.isScanning() ? "..." : "Calculer", Draw.ButtonStyle.PRIMARY,
+                () -> cfg.kitsEnabled && client.player != null && !KitTracker.isScanning(),
+                () -> { KitTracker.scanNow(); client.setScreen(null); }));
+
+        c.add(new SectionTitle("HUD"));
+        c.add(new ToggleRow("Afficher le HUD des kits", "Liste compacte de tes kits et de leur temps restant.",
+                () -> cfg.kitHudEnabled, v -> cfg.kitHudEnabled = v));
+        c.add(new ButtonRow("Placer le HUD", "Glisse-le où tu veux sur l'écran, coin en bas à droite ou molette pour la taille.",
+                "Modifier", Draw.ButtonStyle.SECONDARY, this::openHudEditor));
+
+        c.add(new SectionTitle("Mes kits"));
+        c.add(new KitList());
+        c.add(new InfoBox("Clique sur une ligne pour afficher ou cacher ce kit dans le HUD.", Theme.TEXT_MUTED));
+        c.add(new InfoBox("Les kits récupérés un par un ou avec « Kit All » sont détectés et leur cooldown est relu directement dans le menu. "
+                + "Chaque ouverture du /kit corrige aussi les temps.", Theme.ACCENT));
     }
 
     private void buildBlocks(List<Component> c) {

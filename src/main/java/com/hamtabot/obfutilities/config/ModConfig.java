@@ -102,6 +102,13 @@ public class ModConfig {
 
     public List<TimerEntry> timers = new ArrayList<>();
 
+    public boolean kitsEnabled     = false;
+    public boolean kitTitleEnabled = true;
+    public boolean kitHudEnabled   = false;
+    public HudPos  kitHudPos       = new HudPos();
+    public float   kitHudScale     = 1.0f;
+    public List<String> kitHudHidden = new ArrayList<>();
+
     public static class CustomBlockEntry {
         public String  blockId      = "minecraft:stone";
         public boolean trackPlaced  = true;
@@ -153,12 +160,16 @@ public class ModConfig {
         if (debugFpsPos == null) debugFpsPos = new HudPos();
         if (debugCoordsPos == null) debugCoordsPos = new HudPos();
         if (debugRamPos == null) debugRamPos = new HudPos();
+        if (kitHudPos == null) kitHudPos = new HudPos();
+        if (kitHudHidden == null) kitHudHidden = new ArrayList<>();
+        kitHudHidden.removeIf(Objects::isNull);
         warps.removeIf(w -> w == null || w.name == null || w.name.isBlank());
         if (adMessage == null) adMessage = "";
         if (afkDimension == null) afkDimension = "minecraft:overworld";
         scaleHud = clampScale(scaleHud);
         heldItemScale = Math.max(0f, Math.min(1f, heldItemScale));
         invHudScale = com.hamtabot.obfutilities.hud.InventoryHud.clampScale(invHudScale);
+        kitHudScale = com.hamtabot.obfutilities.kit.KitHud.clampScale(kitHudScale);
         invHudOpacity = Math.max(0f, Math.min(1f, invHudOpacity));
     }
 

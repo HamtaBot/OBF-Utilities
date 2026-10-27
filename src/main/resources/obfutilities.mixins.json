@@ -24,7 +24,8 @@
     "NoShulkerAnimationMixin",
     "CommandSuggestionsMixin",
     "ClientBrandMixin",
-    "WarpKeyMixin"
+    "WarpKeyMixin",
+    "KitClickMixin"
   ],
   "injectors": {
     "defaultRequire": 1
