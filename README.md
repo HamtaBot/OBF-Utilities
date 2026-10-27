@@ -47,6 +47,14 @@ Ton inventaire affiché à l'écran en temps réel, sans avoir à l'ouvrir :
 - Basés sur l'heure réelle : un compte à rebours continue même jeu fermé (pratique pour les votes)
 - Affichables à l'écran, déplaçables et redimensionnables
 
+## 🎁 Kits
+- Prévient quand un kit du `/kit` est disponible, avec un **message à l'écran** (désactivable)
+- Les cooldowns sont **sauvegardés en heure réelle** : ils restent justes après avoir fermé et relancé le jeu
+- Bouton **Calculer les cooldowns** : ouvre le `/kit`, lit le temps restant de chaque kit et le referme (à faire la première fois)
+- Chaque kit récupéré remet son compteur à zéro, qu'il soit pris dans le menu ou avec `/cmi kit`
+- **Kit All** est aussi détecté : les nouveaux cooldowns sont relus directement dans le menu
+- **HUD compact** des kits et de leur temps restant, déplaçable et redimensionnable comme le reste du HUD. Chaque kit peut y être affiché ou caché depuis la config
+
 ## ⛏️ AutoTool
 Prend automatiquement le meilleur outil de ta hotbar selon le bloc visé, et ton arme quand tu frappes un mob.
 - Pioche, pelle, hache, houe, cisailles et épée, chacune activable séparément
