@@ -108,6 +108,13 @@ public class ModConfig {
     public HudPos  kitHudPos       = new HudPos();
     public float   kitHudScale     = 1.0f;
     public List<String> kitHudHidden = new ArrayList<>();
+    public String  kitServer       = "ONEBLOCK";
+
+    public boolean gradesEnabled     = false;
+    public boolean gradeTitleEnabled = true;
+    public boolean gradeHudEnabled   = false;
+    public HudPos  gradeHudPos       = new HudPos();
+    public float   gradeHudScale     = 1.0f;
 
     public static class CustomBlockEntry {
         public String  blockId      = "minecraft:stone";
@@ -163,6 +170,8 @@ public class ModConfig {
         if (kitHudPos == null) kitHudPos = new HudPos();
         if (kitHudHidden == null) kitHudHidden = new ArrayList<>();
         kitHudHidden.removeIf(Objects::isNull);
+        if (kitServer == null) kitServer = "ONEBLOCK";
+        if (gradeHudPos == null) gradeHudPos = new HudPos();
         warps.removeIf(w -> w == null || w.name == null || w.name.isBlank());
         if (adMessage == null) adMessage = "";
         if (afkDimension == null) afkDimension = "minecraft:overworld";
@@ -170,6 +179,7 @@ public class ModConfig {
         heldItemScale = Math.max(0f, Math.min(1f, heldItemScale));
         invHudScale = com.hamtabot.obfutilities.hud.InventoryHud.clampScale(invHudScale);
         kitHudScale = com.hamtabot.obfutilities.kit.KitHud.clampScale(kitHudScale);
+        gradeHudScale = com.hamtabot.obfutilities.grade.GradeHud.clampScale(gradeHudScale);
         invHudOpacity = Math.max(0f, Math.min(1f, invHudOpacity));
     }
 

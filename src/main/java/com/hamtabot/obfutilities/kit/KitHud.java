@@ -16,7 +16,6 @@ public final class KitHud {
     private static final int PAD = 5, BAR_GAP = 8, LINE = 10, COL_GAP = 10;
     public static final int DEFAULT_X = 10, DEFAULT_Y = 140;
     public static final float MIN_SCALE = 0.5f, MAX_SCALE = 2f;
-    private static final String TITLE = "Kits";
     private static final String EMPTY = "Ouvre /kit";
 
     private record Row(String name, String status, int color) {}
@@ -39,7 +38,7 @@ public final class KitHud {
 
     private static List<Row> rows() {
         List<Row> rows = new ArrayList<>();
-        for (KitTracker.Kit kit : KitTracker.KITS) {
+        for (KitTracker.Kit kit : KitTracker.kits(KitTracker.activeServer())) {
             if (!isListed(kit)) continue;
             KitTracker.State s = KitTracker.state(kit);
             switch (s.status) {
@@ -54,8 +53,13 @@ public final class KitHud {
         return rows;
     }
 
+    private static String title() {
+        KitTracker.Server server = KitTracker.activeServer();
+        return server == KitTracker.Server.ONEBLOCK ? "Kits" : "Kits " + server.label;
+    }
+
     private static int[] size(TextRenderer tr, List<Row> rows) {
-        int nameW = tr.getWidth(TITLE), statusW = 0;
+        int nameW = tr.getWidth(title()), statusW = 0;
         for (Row r : rows) {
             nameW = Math.max(nameW, tr.getWidth(r.name()));
             statusW = Math.max(statusW, tr.getWidth(r.status()));
@@ -82,7 +86,7 @@ public final class KitHud {
         // one batch for the whole card instead of a flush per fill/drawText
         ctx.draw(() -> {
             Draw.overlayCard(ctx, 0, 0, sz[0], sz[1], Theme.ACCENT, editing);
-            ctx.drawText(tr, TITLE, BAR_GAP, PAD, Theme.ACCENT, false);
+            ctx.drawText(tr, title(), BAR_GAP, PAD, Theme.ACCENT, false);
             ctx.fill(BAR_GAP, PAD + LINE, sz[0] - PAD, PAD + LINE + 1, Theme.DIVIDER);
             int y = PAD + LINE + 3;
             for (Row r : rows) {

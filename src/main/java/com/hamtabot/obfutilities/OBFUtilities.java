@@ -4,6 +4,8 @@ import com.hamtabot.obfutilities.blockshade.BlockShade;
 import com.hamtabot.obfutilities.config.ModConfig;
 import com.hamtabot.obfutilities.debug.DebugOverlay;
 import com.hamtabot.obfutilities.fullbright.FullBright;
+import com.hamtabot.obfutilities.grade.GradeHud;
+import com.hamtabot.obfutilities.grade.GradeTracker;
 import com.hamtabot.obfutilities.hud.InventoryHud;
 import com.hamtabot.obfutilities.hud.OBFHud;
 import com.hamtabot.obfutilities.input.KeyRemap;
@@ -46,6 +48,7 @@ public class OBFUtilities implements ClientModInitializer {
         SessionStore.load();
         AfkTimer.load();
         KitTracker.load();
+        GradeTracker.load();
 
         Keybinds.register();
         StorageUnit.register();
@@ -63,6 +66,7 @@ public class OBFUtilities implements ClientModInitializer {
             DebugOverlay.render(ctx, false);
             Timers.render(ctx, false);
             KitHud.render(ctx, false);
+            GradeHud.render(ctx, false);
         });
 
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
@@ -80,6 +84,7 @@ public class OBFUtilities implements ClientModInitializer {
             WarpMacros.tick(client);
             StorageUnit.tick(client);
             KitTracker.tick(client);
+            GradeTracker.tick(client);
         });
     }
 

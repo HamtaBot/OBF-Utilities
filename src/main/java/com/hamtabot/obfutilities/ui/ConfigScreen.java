@@ -3,6 +3,7 @@ package com.hamtabot.obfutilities.ui;
 import com.hamtabot.obfutilities.OBFUtilities;
 import com.hamtabot.obfutilities.blockshade.BlockShade;
 import com.hamtabot.obfutilities.config.ModConfig;
+import com.hamtabot.obfutilities.grade.GradeTracker;
 import com.hamtabot.obfutilities.hud.InventoryHud;
 import com.hamtabot.obfutilities.input.KeyRemap;
 import com.hamtabot.obfutilities.input.Keybinds;
@@ -45,6 +46,7 @@ public class ConfigScreen extends Screen {
         AFK      (Items.RED_BED,         "AFK Timer",     "Temps passé dans ta zone AFK"),
         TIMERS   (Items.CLOCK,           "Timers",        "Chronos et comptes à rebours, affichables à l'écran"),
         KITS     (Items.ENDER_CHEST,     "Kits",          "Prévient quand un kit du /kit est disponible"),
+        GRADES   (Items.NAME_TAG,        "Grades",        "Temps restant de tes grades du /grade"),
         BLOCKS   (Items.GRASS_BLOCK,     "Blocs suivis",  "Compte des blocs précis en plus des stats globales"),
         AUTOTOOL (Items.DIAMOND_PICKAXE, "AutoTool",      "Prend automatiquement le bon outil de la hotbar"),
         VISUALS  (Items.TORCH,           "Visuel",        "Luminosité et overlays d'informations"),
@@ -126,6 +128,7 @@ public class ConfigScreen extends Screen {
             case AFK       -> buildAfk(c);
             case TIMERS    -> buildTimers(c);
             case KITS      -> buildKits(c);
+            case GRADES    -> buildGrades(c);
             case BLOCKS    -> buildBlocks(c);
             case AUTOTOOL  -> buildAutoTool(c);
             case VISUALS   -> buildVisuals(c);
@@ -251,11 +254,38 @@ public class ConfigScreen extends Screen {
         c.add(new ButtonRow("Placer le HUD", "Glisse-le où tu veux sur l'écran, coin en bas à droite ou molette pour la taille.",
                 "Modifier", Draw.ButtonStyle.SECONDARY, this::openHudEditor));
 
-        c.add(new SectionTitle("Mes kits"));
-        c.add(new KitList());
-        c.add(new InfoBox("Clique sur une ligne pour afficher ou cacher ce kit dans le HUD.", Theme.TEXT_MUTED));
+        for (KitTracker.Server server : KitTracker.Server.values()) {
+            c.add(new SectionTitle("Mes kits " + server.label));
+            c.add(new KitList(server));
+        }
+        c.add(new InfoBox("Clique sur une ligne pour afficher ou cacher ce kit dans le HUD. "
+                + "Le HUD montre les kits du serveur dont le /kit a été ouvert en dernier.", Theme.TEXT_MUTED));
         c.add(new InfoBox("Les kits récupérés un par un ou avec « Kit All » sont détectés et leur cooldown est relu directement dans le menu. "
                 + "Chaque ouverture du /kit corrige aussi les temps.", Theme.ACCENT));
+    }
+
+    private void buildGrades(List<Component> c) {
+        c.add(new ToggleRow("Activer", "Suit le temps restant de tes grades du /grade, même jeu fermé.",
+                () -> cfg.gradesEnabled, v -> cfg.gradesEnabled = v));
+        c.add(new ToggleRow("Message à l'écran", "Prévient 24h avant la fin d'un grade temporaire, puis quand il a expiré.",
+                () -> cfg.gradeTitleEnabled, v -> cfg.gradeTitleEnabled = v));
+        c.add(new ButtonRow("Lire mes grades", "Ouvre le /grade, lit tes grades et leur expiration puis le referme. À faire la première fois.",
+                () -> GradeTracker.isScanning() ? "..." : "Lire", Draw.ButtonStyle.PRIMARY,
+                () -> cfg.gradesEnabled && client.player != null && !GradeTracker.isScanning(),
+                () -> { GradeTracker.scanNow(); client.setScreen(null); }));
+
+        c.add(new SectionTitle("HUD"));
+        c.add(new ToggleRow("Afficher le HUD des grades", "Tes grades actifs et le temps avant leur expiration.",
+                () -> cfg.gradeHudEnabled, v -> cfg.gradeHudEnabled = v));
+        c.add(new ButtonRow("Placer le HUD", "Glisse-le où tu veux sur l'écran, coin en bas à droite ou molette pour la taille.",
+                "Modifier", Draw.ButtonStyle.SECONDARY, this::openHudEditor));
+
+        for (KitTracker.Server server : KitTracker.Server.values()) {
+            c.add(new SectionTitle("Mes grades " + server.label));
+            c.add(new GradeList(server));
+        }
+        c.add(new InfoBox("Les grades achetés en monnaie durent 30 jours, ceux achetés en tokens sont permanents. "
+                + "Chaque ouverture du /grade corrige les temps, y compris juste après un achat.", Theme.ACCENT));
     }
 
     private void buildBlocks(List<Component> c) {
