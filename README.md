@@ -168,4 +168,6 @@ Le `.jar` se trouve ensuite dans `build/libs/`.
 | `config/obfutilities_waypoints.json` | Waypoints |
 | `config/obfutilities_session.json` | Session sauvegardée (si « Garder la session » est activé) |
 | `config/obfutilities_afk.json` | Temps AFK sauvegardé (si l'option est activée) |
+| `config/obfutilities_kits.json` | Cooldowns des kits (OneBlock et Survie) |
+| `config/obfutilities_grades.json` | Grades suivis et leur date d'expiration |
 | `obfutilities_hud_pos.properties` | Position du HUD |
