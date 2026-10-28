@@ -53,7 +53,15 @@ Ton inventaire affiché à l'écran en temps réel, sans avoir à l'ouvrir :
 - Bouton **Calculer les cooldowns** : ouvre le `/kit`, lit le temps restant de chaque kit et le referme (à faire la première fois)
 - Chaque kit récupéré remet son compteur à zéro, qu'il soit pris dans le menu ou avec `/cmi kit`
 - **Kit All** est aussi détecté : les nouveaux cooldowns sont relus directement dans le menu
+- Compatible avec le `/kit` du serveur **Survie** : ses kits ont leurs propres cooldowns, et le HUD affiche ceux du serveur dont le `/kit` a été ouvert en dernier
 - **HUD compact** des kits et de leur temps restant, déplaçable et redimensionnable comme le reste du HUD. Chaque kit peut y être affiché ou caché depuis la config
+
+## 🏷️ Grades
+- Suit les grades du `/grade` sur **OneBlock** et **Survie** : temporaires (achetés en monnaie, 30 jours) ou **permanents** (achetés en tokens)
+- L'expiration est **sauvegardée en heure réelle** et relue à chaque ouverture du `/grade`, y compris juste après un achat
+- Bouton **Lire mes grades** : ouvre le `/grade`, lit tes grades et le referme (à faire la première fois)
+- **Message à l'écran** 24h avant la fin d'un grade temporaire, puis quand il a expiré (désactivable)
+- **HUD compact** des grades actifs et de leur temps restant, déplaçable et redimensionnable
 
 ## ⛏️ AutoTool
 Prend automatiquement le meilleur outil de ta hotbar selon le bloc visé, et ton arme quand tu frappes un mob.
