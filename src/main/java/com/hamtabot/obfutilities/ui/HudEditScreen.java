@@ -3,6 +3,7 @@ package com.hamtabot.obfutilities.ui;
 import com.hamtabot.obfutilities.OBFUtilities;
 import com.hamtabot.obfutilities.config.ModConfig;
 import com.hamtabot.obfutilities.debug.DebugOverlay;
+import com.hamtabot.obfutilities.grade.GradeHud;
 import com.hamtabot.obfutilities.hud.InventoryHud;
 import com.hamtabot.obfutilities.hud.OBFHud;
 import com.hamtabot.obfutilities.kit.KitHud;
@@ -25,6 +26,7 @@ public class HudEditScreen extends Screen {
     private boolean draggingHud = false, resizingHud = false;
     private boolean draggingInv = false, resizingInv = false;
     private boolean draggingKits = false, resizingKits = false;
+    private boolean draggingGrades = false, resizingGrades = false;
     private int dragOffX, dragOffY;
     private double resizeStartX;
     private float resizeStartScale;
@@ -52,11 +54,12 @@ public class HudEditScreen extends Screen {
         DebugOverlay.render(ctx, true);
         Timers.render(ctx, true);
         KitHud.render(ctx, true);
+        GradeHud.render(ctx, true);
 
         renderToolbar(ctx, mouseX, mouseY);
 
         float scale = resizingHud ? OBFUtilities.config.scaleHud : resizingInv ? OBFUtilities.config.invHudScale
-                : resizingKits ? OBFUtilities.config.kitHudScale : resizingTimer >= 0 ? Timers.all().get(resizingTimer).scale : -1;
+                : resizingKits ? OBFUtilities.config.kitHudScale : resizingGrades ? OBFUtilities.config.gradeHudScale : resizingTimer >= 0 ? Timers.all().get(resizingTimer).scale : -1;
         if (scale > 0) ctx.drawTooltip(textRenderer, Text.literal(Math.round(scale * 100) + " %"), mouseX, mouseY);
     }
 
@@ -97,6 +100,8 @@ public class HudEditScreen extends Screen {
         InventoryHud.setPos(10, 60);
         cfg.kitHudScale = 1.0f;
         KitHud.setPos(KitHud.DEFAULT_X, KitHud.DEFAULT_Y);
+        cfg.gradeHudScale = 1.0f;
+        GradeHud.setPos(GradeHud.DEFAULT_X, GradeHud.DEFAULT_Y);
         DebugOverlay.setPos(DebugOverlay.Element.FPS,    10, height - 80);
         DebugOverlay.setPos(DebugOverlay.Element.COORDS, 10, height - 62);
         DebugOverlay.setPos(DebugOverlay.Element.RAM,    10, height - 44);
@@ -149,6 +154,19 @@ public class HudEditScreen extends Screen {
                 return true;
             }
         }
+        if (GradeHud.isInResizeGrip(mouseX, mouseY)) {
+            resizingGrades = true;
+            resizeStartX = mouseX;
+            resizeStartScale = OBFUtilities.config.gradeHudScale;
+            return true;
+        }
+        if (GradeHud.isMouseOver(mouseX, mouseY)) {
+            int[] b = GradeHud.bounds();
+            draggingGrades = true;
+            dragOffX = (int) mouseX - b[0];
+            dragOffY = (int) mouseY - b[1];
+            return true;
+        }
         if (KitHud.isInResizeGrip(mouseX, mouseY)) {
             resizingKits = true;
             resizeStartX = mouseX;
@@ -198,6 +216,16 @@ public class HudEditScreen extends Screen {
         }
         if (resizingInv) {
             InventoryHud.setScale(resizeStartScale + (float) (mouseX - resizeStartX) / 200f);
+            return true;
+        }
+        if (resizingGrades) {
+            GradeHud.setScale(resizeStartScale + (float) (mouseX - resizeStartX) / 200f);
+            return true;
+        }
+        if (draggingGrades) {
+            int[] b = GradeHud.bounds();
+            int[] p = snap((int) mouseX - dragOffX, (int) mouseY - dragOffY, b[2], b[3]);
+            GradeHud.setPos(p[0], p[1]);
             return true;
         }
         if (resizingKits) {
@@ -264,6 +292,7 @@ public class HudEditScreen extends Screen {
         draggingHud = resizingHud = false;
         draggingInv = resizingInv = false;
         draggingKits = resizingKits = false;
+        draggingGrades = resizingGrades = false;
         draggedOverlay = null;
         draggedTimer = resizingTimer = -1;
         guideX = guideY = -1;
@@ -273,6 +302,10 @@ public class HudEditScreen extends Screen {
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double amount) {
         int timer = timerAt(mouseX, mouseY);
+        if (timer < 0 && GradeHud.isMouseOver(mouseX, mouseY)) {
+            GradeHud.setScale(OBFUtilities.config.gradeHudScale + (float) amount * 0.1f);
+            return true;
+        }
         if (timer < 0 && KitHud.isMouseOver(mouseX, mouseY)) {
             KitHud.setScale(OBFUtilities.config.kitHudScale + (float) amount * 0.1f);
             return true;

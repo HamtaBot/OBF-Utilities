@@ -14,10 +14,12 @@ public class KitList extends Component {
 
     private static final int LINE = 16, PAD = 4;
 
-    private final List<KitTracker.Kit> kits = KitTracker.KITS;
-    private final Anim[] knobs = new Anim[kits.size()];
+    private final List<KitTracker.Kit> kits;
+    private final Anim[] knobs;
 
-    public KitList() {
+    public KitList(KitTracker.Server server) {
+        kits = KitTracker.kits(server);
+        knobs = new Anim[kits.size()];
         for (int i = 0; i < kits.size(); i++) knobs[i] = new Anim(KitHud.isListed(kits.get(i)) ? 1f : 0f);
     }
 

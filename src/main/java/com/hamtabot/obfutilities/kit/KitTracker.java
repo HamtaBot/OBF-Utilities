@@ -31,27 +31,55 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-/** Reads the DeluxeMenus /kit menu and keeps each kit's cooldown as a real-time timestamp. */
+/** Reads the DeluxeMenus /kit menu of each server and keeps each kit's cooldown as a real-time timestamp. */
 public final class KitTracker {
 
     public enum Status { UNKNOWN, NOT_OWNED, READY, COOLDOWN }
 
-    public record Kit(String key, String name, int slot, String cmiId, boolean tiered) {
+    /** Both servers sit behind the same proxy and open their own /kit menu, told apart by its size. */
+    public enum Server {
+        ONEBLOCK("OneBlock", 36), SURVIE("Survie", 54);
+
+        public final String label;
+        final int menuSize;
+
+        Server(String label, int menuSize) { this.label = label; this.menuSize = menuSize; }
+    }
+
+    public record Kit(Server server, String key, String name, int slot, String cmiId, boolean tiered) {
         String cmiId(int tier) { return tiered ? cmiId + tier : cmiId; }
     }
 
     public static final List<Kit> KITS = List.of(
-            new Kit("joueur",    "Joueur",      6,  "joueur",        false),
-            new Kit("weak",      "OneWeak",     7,  "oneweak",       false),
-            new Kit("strong",    "OneStrong",   15, "onestrong",     false),
-            new Kit("master",    "OneMaster",   16, "onemaster",     false),
-            new Kit("legend",    "OneLegend",   24, "onelegend",     false),
-            new Kit("supreme",   "OneSupreme",  25, "onesupreme",    false),
-            new Kit("empereur",  "OneEmpereur", 33, "oneempereur",   false),
-            new Kit("eternel",   "OneÉternel",  34, "oneeternel",    false),
-            new Kit("cles",      "Clés",        1,  "clestier",      true),
-            new Kit("netherite", "Netherite",   2,  "netheritetier", true),
-            new Kit("monnaie",   "Monnaie",     3,  "monnaietier",   true));
+            new Kit(Server.ONEBLOCK, "joueur",    "Joueur",      6,  "joueur",        false),
+            new Kit(Server.ONEBLOCK, "weak",      "OneWeak",     7,  "oneweak",       false),
+            new Kit(Server.ONEBLOCK, "strong",    "OneStrong",   15, "onestrong",     false),
+            new Kit(Server.ONEBLOCK, "master",    "OneMaster",   16, "onemaster",     false),
+            new Kit(Server.ONEBLOCK, "legend",    "OneLegend",   24, "onelegend",     false),
+            new Kit(Server.ONEBLOCK, "supreme",   "OneSupreme",  25, "onesupreme",    false),
+            new Kit(Server.ONEBLOCK, "empereur",  "OneEmpereur", 33, "oneempereur",   false),
+            new Kit(Server.ONEBLOCK, "eternel",   "OneÉternel",  34, "oneeternel",    false),
+            new Kit(Server.ONEBLOCK, "cles",      "Clés",        1,  "clestier",      true),
+            new Kit(Server.ONEBLOCK, "netherite", "Netherite",   2,  "netheritetier", true),
+            new Kit(Server.ONEBLOCK, "monnaie",   "Monnaie",     3,  "monnaietier",   true),
+            // survie keys are prefixed so their saved cooldowns and HUD toggles never mix with OneBlock's
+            new Kit(Server.SURVIE, "survie_nourriture", "Nourriture",   20, "nourriture",  false),
+            new Kit(Server.SURVIE, "survie_aventurier", "Aventurier",   21, "aventurier",  false),
+            new Kit(Server.SURVIE, "survie_outils",     "Outils",       22, "outils",      false),
+            new Kit(Server.SURVIE, "survie_oceans",     "Océans",       23, "oceans",      false),
+            new Kit(Server.SURVIE, "survie_enchanteur", "Enchantement", 24, "enchanteur",  false),
+            new Kit(Server.SURVIE, "survie_quartz",     "Quartz",       25, "quartz",      false),
+            new Kit(Server.SURVIE, "survie_joueur",     "Joueur",       28, "joueur",      false),
+            new Kit(Server.SURVIE, "survie_weak",       "OneWeak",      29, "oneweak",     false),
+            new Kit(Server.SURVIE, "survie_strong",     "OneStrong",    30, "onestrong",   false),
+            new Kit(Server.SURVIE, "survie_master",     "OneMaster",    31, "onemaster",   false),
+            new Kit(Server.SURVIE, "survie_legend",     "OneLegend",    32, "onelegend",   false),
+            new Kit(Server.SURVIE, "survie_supreme",    "OneSupreme",   33, "onesupreme",  false),
+            new Kit(Server.SURVIE, "survie_empereur",   "OneEmpereur",  34, "oneempereur", false));
+
+    public static List<Kit> kits(Server server) {
+        return KITS.stream().filter(k -> k.server() == server).toList();
+    }
 
     public static class State {
         public Status status = Status.UNKNOWN;
@@ -64,9 +92,11 @@ public final class KitTracker {
     private static final Path FILE = Paths.get("config/obfutilities_kits.json");
     private static final Gson GSON = new Gson();
 
-    private static final int MENU_SIZE = 36, CLAIM_ALL_SLOT = 30;
+    private static final int MAX_MENU_SIZE = 54, CLAIM_ALL_SLOT = 30;
     private static final String CLAIM_ALL_MARKER = "tous les kits disponibles";
     private static final String DURATION_MARKER = "ᴅᴀɴѕ";
+    // the survie menu prints its cooldown on the line after this one
+    private static final String DURATION_NEXT_LINE_MARKER = "Temps restant avant prochain kit";
     private static final Pattern TIER = Pattern.compile("ᴛɪᴇʀ\\s*:\\s*(\\d)");
     private static final Pattern CLOCK = Pattern.compile("(\\d+):(\\d{1,2})(?::(\\d{1,2}))?");
     private static final Pattern PART = Pattern.compile("(\\d+)\\s*([\\p{L}]*)");
@@ -81,7 +111,7 @@ public final class KitTracker {
     private static long pendingScanAt, pendingScanDeadline, awaitingUntil;
     private static boolean manualScan, silentScan;
     private static int syncIdBeforeScan = -1;
-    private static final ItemStack[] lastSeen = new ItemStack[MENU_SIZE];
+    private static final ItemStack[] lastSeen = new ItemStack[MAX_MENU_SIZE];
     private static int lastSyncId = -1;
 
     private KitTracker() {}
@@ -104,6 +134,21 @@ public final class KitTracker {
     public static boolean hasData() {
         for (Kit k : KITS) if (state(k).status != Status.UNKNOWN) return true;
         return false;
+    }
+
+    /** The server whose /kit menu was opened last, which is the one the player is on. */
+    public static Server activeServer() {
+        try {
+            return Server.valueOf(OBFUtilities.config.kitServer);
+        } catch (RuntimeException e) {
+            return Server.ONEBLOCK;
+        }
+    }
+
+    public static void setActiveServer(Server server) {
+        if (server == activeServer()) return;
+        OBFUtilities.config.kitServer = server.name();
+        OBFUtilities.config.save();
     }
 
     public static long remaining(State s) { return Math.max(0, s.readyAt - System.currentTimeMillis()); }
@@ -140,7 +185,7 @@ public final class KitTracker {
         }
         long now = System.currentTimeMillis();
         GenericContainerScreenHandler menu = openKitMenu(client);
-        if (menu != null) read(menu);
+        if (menu != null) read(menu, menuServer(menu));
         else lastSyncId = -1;
 
         if (pendingScanAt != 0 && now >= pendingScanAt) startScan(client, menu, now);
@@ -179,24 +224,35 @@ public final class KitTracker {
     private static GenericContainerScreenHandler openKitMenu(MinecraftClient client) {
         if (!(client.currentScreen instanceof GenericContainerScreen screen)) return null;
         GenericContainerScreenHandler handler = screen.getScreenHandler();
-        return isKitMenu(handler) ? handler : null;
+        return menuServer(handler) != null ? handler : null;
     }
 
-    private static boolean isKitMenu(ScreenHandler handler) {
-        if (!(handler instanceof GenericContainerScreenHandler h) || h.getRows() * 9 != MENU_SIZE) return false;
-        for (String line : lore(h.getSlot(CLAIM_ALL_SLOT).getStack())) {
-            if (line.contains(CLAIM_ALL_MARKER)) return true;
+    /** Which server's /kit menu this is, or null when it isn't one. */
+    private static Server menuServer(ScreenHandler handler) {
+        if (!(handler instanceof GenericContainerScreenHandler h)) return null;
+        int size = h.getRows() * 9;
+        if (size == Server.ONEBLOCK.menuSize) {
+            for (String line : lore(h.getSlot(CLAIM_ALL_SLOT).getStack())) {
+                if (line.contains(CLAIM_ALL_MARKER)) return Server.ONEBLOCK;
+            }
+        } else if (size == Server.SURVIE.menuSize) {
+            for (Kit kit : kits(Server.SURVIE)) {
+                for (String line : lore(h.getSlot(kit.slot()).getStack())) {
+                    if (line.contains("Kit disponible") || line.contains("possédez pas ce kit")) return Server.SURVIE;
+                }
+            }
         }
-        return false;
+        return null;
     }
 
-    private static void read(GenericContainerScreenHandler menu) {
+    private static void read(GenericContainerScreenHandler menu, Server server) {
         if (menu.syncId != lastSyncId) {
             lastSyncId = menu.syncId;
             Arrays.fill(lastSeen, null);
+            setActiveServer(server);
         }
         boolean changed = false;
-        for (Kit kit : KITS) {
+        for (Kit kit : kits(server)) {
             ItemStack stack = menu.getSlot(kit.slot()).getStack();
             if (stack == lastSeen[kit.slot()]) continue;
             lastSeen[kit.slot()] = stack;
@@ -209,15 +265,19 @@ public final class KitTracker {
         State s = state(kit);
         Status status = null;
         long remaining = 0, granularity = 0;
+        boolean durationNext = false;
         for (String line : lore) {
             if (line.contains("possédez pas")) status = Status.NOT_OWNED;
-            else if (line.contains("déjà récupéré")) status = Status.COOLDOWN;
+            else if (line.contains("déjà récupéré") || line.contains("Kit disponible : Non")) status = Status.COOLDOWN;
+            else if (line.contains("Kit disponible : Oui")) status = Status.READY;
             else if (line.contains("récupérer le kit") && status == null) status = Status.READY;
             Matcher tier = TIER.matcher(line);
             if (tier.find()) s.tier = Integer.parseInt(tier.group(1));
             int at = line.indexOf(DURATION_MARKER);
-            if (at >= 0) {
-                long[] d = parseDuration(line.substring(at + DURATION_MARKER.length()));
+            String duration = at >= 0 ? line.substring(at + DURATION_MARKER.length()) : durationNext ? line : null;
+            durationNext = line.contains(DURATION_NEXT_LINE_MARKER);
+            if (duration != null) {
+                long[] d = parseDuration(duration);
                 if (d != null) { remaining = d[0]; granularity = d[1]; }
             }
         }
@@ -246,7 +306,7 @@ public final class KitTracker {
     }
 
     /** Returns {duration, smallest unit shown} in ms, or null when the text holds no duration. */
-    static long[] parseDuration(String text) {
+    public static long[] parseDuration(String text) {
         Matcher clock = CLOCK.matcher(text);
         if (clock.find()) {
             long a = Long.parseLong(clock.group(1)), b = Long.parseLong(clock.group(2));
@@ -279,7 +339,7 @@ public final class KitTracker {
         };
     }
 
-    private static List<String> lore(ItemStack stack) {
+    public static List<String> lore(ItemStack stack) {
         List<String> lines = new ArrayList<>();
         NbtCompound display = stack.getSubNbt("display");
         if (display == null) return lines;
@@ -300,15 +360,16 @@ public final class KitTracker {
         if (!OBFUtilities.config.kitsEnabled || client.player == null || button != 0) return;
         if (action != SlotActionType.PICKUP && action != SlotActionType.QUICK_MOVE) return;
         ScreenHandler handler = client.player.currentScreenHandler;
-        if (handler == null || handler.syncId != syncId || !isKitMenu(handler)) return;
+        Server server = handler == null || handler.syncId != syncId ? null : menuServer(handler);
+        if (server == null) return;
 
         // the menu stays open and refreshes after "Kit All", so the new cooldowns are read on the next ticks
-        if (slot == CLAIM_ALL_SLOT) {
-            for (Kit kit : KITS) if (state(kit).status == Status.READY) claimed(kit);
+        if (server == Server.ONEBLOCK && slot == CLAIM_ALL_SLOT) {
+            for (Kit kit : kits(server)) if (state(kit).status == Status.READY) claimed(kit);
             save();
             return;
         }
-        for (Kit kit : KITS) {
+        for (Kit kit : kits(server)) {
             if (kit.slot() == slot && state(kit).status == Status.READY) {
                 claimed(kit);
                 save();
@@ -321,7 +382,8 @@ public final class KitTracker {
         Matcher m = CLAIM_COMMAND.matcher(command.trim());
         if (!m.find()) return;
         String id = m.group(1).toLowerCase(Locale.ROOT);
-        for (Kit kit : KITS) {
+        // both servers share kit ids, so a typed command counts for the server the player is on
+        for (Kit kit : kits(activeServer())) {
             State s = state(kit);
             boolean match = kit.tiered() ? id.startsWith(kit.cmiId()) : id.equals(kit.cmiId());
             if (!match || s.status != Status.READY) continue;
@@ -343,12 +405,13 @@ public final class KitTracker {
 
     private static void notifyReady(MinecraftClient client, long now) {
         List<String> ready = new ArrayList<>();
+        Server active = activeServer();
         for (Kit kit : KITS) {
             State s = state(kit);
             if (s.status != Status.COOLDOWN || s.readyAt == 0 || s.readyAt > now) continue;
             s.status = Status.READY;
             s.readyAt = 0;
-            ready.add(displayName(kit));
+            ready.add(kit.server() == active ? displayName(kit) : displayName(kit) + " (" + kit.server().label + ")");
         }
         if (ready.isEmpty()) return;
         save();
