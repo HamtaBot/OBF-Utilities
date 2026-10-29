@@ -4,7 +4,11 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.DrawContext;
+import net.minecraft.client.render.LightmapTextureManager;
+import net.minecraft.client.render.RenderLayer;
+import net.minecraft.client.render.VertexConsumer;
 import net.minecraft.client.sound.PositionedSoundInstance;
+import net.minecraft.client.texture.Sprite;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.item.ItemStack;
 import net.minecraft.text.OrderedText;
@@ -12,6 +16,7 @@ import net.minecraft.text.Text;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.RotationAxis;
+import org.joml.Matrix4f;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -31,6 +36,24 @@ public final class Draw {
 
     public static void card(DrawContext ctx, int x, int y, int w, int h, int fill, int border) {
         round(ctx, x, y, w, h, border);
+        round(ctx, x + 1, y + 1, w - 2, h - 2, fill);
+    }
+
+    /**
+     * Same look as {@link #card}, but the border is only drawn as a ring instead of under the fill, so a
+     * see-through fill shows what is behind the card and not the border colour.
+     */
+    public static void ringCard(DrawContext ctx, int x, int y, int w, int h, int fill, int border) {
+        if (w <= 4 || h <= 4) { card(ctx, x, y, w, h, fill, border); return; }
+        ctx.fill(x + 1, y, x + w - 1, y + 1, border);
+        ctx.fill(x + 1, y + h - 1, x + w - 1, y + h, border);
+        ctx.fill(x, y + 1, x + 1, y + h - 1, border);
+        ctx.fill(x + w - 1, y + 1, x + w, y + h - 1, border);
+        // card() leaves these four pixels of the border showing inside the rounded fill
+        ctx.fill(x + 1, y + 1, x + 2, y + 2, border);
+        ctx.fill(x + w - 2, y + 1, x + w - 1, y + 2, border);
+        ctx.fill(x + 1, y + h - 2, x + 2, y + h - 1, border);
+        ctx.fill(x + w - 2, y + h - 2, x + w - 1, y + h - 1, border);
         round(ctx, x + 1, y + 1, w - 2, h - 2, fill);
     }
 
@@ -84,6 +107,22 @@ public final class Draw {
         m.scale(size / 16f, size / 16f, 1f);
         ctx.drawItem(stack, 0, 0);
         m.pop();
+    }
+
+    /**
+     * Draws an item's flat texture as one quad in the text batch. Much cheaper than {@link #item} for HUDs drawn
+     * every frame: no item renderer, no lighting setup and no flush, and it fades with the shader colour like text.
+     * Meant for flat items; a block or a 3D model shows its particle texture.
+     */
+    public static void itemSprite(DrawContext ctx, ItemStack stack, float x, float y, float size) {
+        Sprite s = MinecraftClient.getInstance().getItemRenderer().getModels().getModel(stack).getParticleSprite();
+        VertexConsumer vc = ctx.getVertexConsumers().getBuffer(RenderLayer.getText(s.getAtlasId()));
+        Matrix4f m = ctx.getMatrices().peek().getPositionMatrix();
+        int light = LightmapTextureManager.MAX_LIGHT_COORDINATE;
+        vc.vertex(m, x, y, 0).color(255, 255, 255, 255).texture(s.getMinU(), s.getMinV()).light(light).next();
+        vc.vertex(m, x, y + size, 0).color(255, 255, 255, 255).texture(s.getMinU(), s.getMaxV()).light(light).next();
+        vc.vertex(m, x + size, y + size, 0).color(255, 255, 255, 255).texture(s.getMaxU(), s.getMaxV()).light(light).next();
+        vc.vertex(m, x + size, y, 0).color(255, 255, 255, 255).texture(s.getMaxU(), s.getMinV()).light(light).next();
     }
 
     private interface Mask { boolean contains(float x, float y); }
@@ -303,6 +342,12 @@ public final class Draw {
             y += Theme.LINE_H;
         }
         return y;
+    }
+
+    /** The colour with its alpha scaled by {@code opacity} (0..1). */
+    public static int withOpacity(int color, float opacity) {
+        int a = Math.round((color >>> 24) * Math.max(0f, Math.min(1f, opacity)));
+        return (a << 24) | (color & 0x00FFFFFF);
     }
 
     public static int lerpColor(int a, int b, float t) {
