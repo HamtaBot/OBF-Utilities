@@ -18,12 +18,12 @@ import java.util.Map;
 
 /**
  * Job, skill and quest boss bars redrawn as progress cards. Each type is its own movable block holding one
- * card per bar the server shows, since several jobs, skills or quests can progress at once: jobs stack,
- * skills and quests sit side by side and wrap when the screen is full.
+ * card per bar the server shows, since several jobs, skills or quests can progress at once: the cards
+ * sit side by side and wrap when the screen is full.
  */
 public enum ProgressHud implements BarLayout.Element {
 
-    JOBS(ProgressBar.Type.JOB, 46, false),
+    JOBS(ProgressBar.Type.JOB, 46, true),
     SKILLS(ProgressBar.Type.SKILL, 92, true),
     QUESTS(ProgressBar.Type.QUEST, 138, true);
 
