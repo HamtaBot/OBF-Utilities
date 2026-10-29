@@ -63,6 +63,16 @@ Ton inventaire affiché à l'écran en temps réel, sans avoir à l'ouvrir :
 - **Message à l'écran** 24h avant la fin d'un grade temporaire, puis quand il a expiré (désactivable)
 - **HUD compact** des grades actifs et de leur temps restant, déplaçable et redimensionnable
 
+## 📊 Infos à l'écran
+Remplace les barres du haut de l'écran par des cartes aux couleurs du mod. Chaque option est désactivée par défaut, la barre d'origine n'est masquée que quand l'option est activée et reste lue en continu.
+- **Barres de jobs** : niveau, XP, gain et pourcentage, avec une icône et une couleur par job (Chasseur, Farmeur, PoseurBlocs, Mineur, Bûcheron, Pêcheur). Deux jobs montés en même temps donnent deux cartes
+- **Barres de compétences** (Survie) : le nom du skill est lu dans la barre, niveau, XP (`12k` compris) et gain, et « MAX » au niveau maximum
+- **Barres de quêtes** : la progression de chaque quête, côte à côte quand plusieurs avancent en même temps
+- **Barres d'infos** : argent, mobcoins, vote party, tokens, île ou claim regroupés dans une carte, avec les icônes du resource pack. Chaque info peut être masquée, séparément sur chaque serveur
+- Taille, opacité du fond et position réglables pour chaque bloc. Les blocs ne se chevauchent jamais : un bloc qui grandit pousse le suivant
+- Petite animation de fondu quand une barre disparaît
+- Bouton **Copier le texte brut des barres** pour signaler un affichage incorrect
+
 ## ⛏️ AutoTool
 Prend automatiquement le meilleur outil de ta hotbar selon le bloc visé, et ton arme quand tu frappes un mob.
 - Pioche, pelle, hache, houe, cisailles et épée, chacune activable séparément
