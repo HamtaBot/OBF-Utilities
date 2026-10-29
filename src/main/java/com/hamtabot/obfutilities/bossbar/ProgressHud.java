@@ -3,6 +3,7 @@ package com.hamtabot.obfutilities.bossbar;
 import com.hamtabot.obfutilities.OBFUtilities;
 import com.hamtabot.obfutilities.config.ModConfig;
 import com.hamtabot.obfutilities.ui.Draw;
+import com.hamtabot.obfutilities.ui.HudElement;
 import com.hamtabot.obfutilities.ui.HudPos;
 import com.hamtabot.obfutilities.ui.Theme;
 import com.mojang.blaze3d.systems.RenderSystem;
@@ -30,7 +31,6 @@ public enum ProgressHud implements BarLayout.Block {
 
     private static final int PAD = 6, ICON = 10, TEXT_X = PAD + ICON + 4;
     private static final int H = 38, GAP = 3, MIN_W = 190, TRACK_Y = 17, TRACK_H = 7, INFO_Y = 28;
-    public static final float MIN_SCALE = 0.5f, MAX_SCALE = 2f;
     private static final String LEVEL = "Niv. ", LEVEL_UP = "▲ Niv. ", WIDEST_PERCENT = "100,0 %";
     private static final long LEAVE_MS = 320;
     private static final float LEAVE_RISE = 5f, LEAVE_SHRINK = 0.06f;
@@ -70,7 +70,7 @@ public enum ProgressHud implements BarLayout.Block {
     @Override
     public void setScale(float s) {
         ModConfig cfg = OBFUtilities.config;
-        s = clampScale(s);
+        s = HudElement.clampScale(s);
         switch (this) { case JOBS -> cfg.jobBarsScale = s; case SKILLS -> cfg.skillBarsScale = s; case QUESTS -> cfg.questBarsScale = s; }
         BarLayout.invalidate();
     }
@@ -321,6 +321,4 @@ public enum ProgressHud implements BarLayout.Block {
         int screenW = MinecraftClient.getInstance().getWindow().getScaledWidth();
         setPos((screenW - b[2]) / 2, defaultY);
     }
-
-    public static float clampScale(float s) { return Math.max(MIN_SCALE, Math.min(MAX_SCALE, s)); }
 }

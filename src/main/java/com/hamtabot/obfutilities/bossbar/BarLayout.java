@@ -1,6 +1,6 @@
 package com.hamtabot.obfutilities.bossbar;
 
-import com.hamtabot.obfutilities.ui.Draw;
+import com.hamtabot.obfutilities.ui.HudElement;
 import net.minecraft.client.MinecraftClient;
 
 import java.util.ArrayList;
@@ -21,33 +21,12 @@ public final class BarLayout {
     }
 
     /** A block the HUD editor moves and resizes. */
-    public interface Block extends Element {
-        boolean isShown();
-
-        float scale();
-
-        void setScale(float s);
-
-        void setPos(int x, int y);
-
-        void resetPos();
-
+    public interface Block extends Element, HudElement {
         /** Where the block is drawn in the HUD editor, after the other blocks were moved out of its way. */
+        @Override
         default int[] bounds() {
             int[] b = BarLayout.bounds(this, true);
             return b != null ? b : new int[4];
-        }
-
-        default boolean isMouseOver(double mx, double my) {
-            if (!isShown()) return false;
-            int[] b = bounds();
-            return Draw.inside(mx, my, b[0], b[1], b[2], b[3]);
-        }
-
-        default boolean isInResizeGrip(double mx, double my) {
-            if (!isShown()) return false;
-            int[] b = bounds();
-            return Draw.inResizeGrip(mx, my, b[0] + b[2], b[1] + b[3]);
         }
     }
 

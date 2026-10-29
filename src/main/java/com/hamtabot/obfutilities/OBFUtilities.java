@@ -37,6 +37,7 @@ import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
 import net.fabricmc.fabric.api.resource.ResourceManagerHelper;
 import net.fabricmc.fabric.api.resource.SimpleSynchronousResourceReloadListener;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.gui.DrawContext;
 import net.minecraft.resource.ResourceManager;
 import net.minecraft.resource.ResourceType;
 import net.minecraft.util.Identifier;
@@ -76,16 +77,7 @@ public class OBFUtilities implements ClientModInitializer {
         ClientLifecycleEvents.CLIENT_STOPPING.register(c -> { SessionStore.save(); AfkTimer.save(); });
 
         HudRenderCallback.EVENT.register((ctx, delta) -> {
-            if (MinecraftClient.getInstance().currentScreen instanceof HudEditScreen) return;
-            BarLayout.newFrame();
-            InventoryHud.render(ctx, false);
-            hud.render(ctx, false);
-            DebugOverlay.render(ctx, false);
-            Timers.render(ctx, false);
-            KitHud.render(ctx, false);
-            GradeHud.render(ctx, false);
-            InfoBarHud.render(ctx, false);
-            ProgressHud.renderAll(ctx, false);
+            if (!(MinecraftClient.getInstance().currentScreen instanceof HudEditScreen)) renderHuds(ctx, false);
         });
 
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
@@ -105,6 +97,19 @@ public class OBFUtilities implements ClientModInitializer {
             KitTracker.tick(client);
             GradeTracker.tick(client);
         });
+    }
+
+    /** Every on-screen HUD, in drawing order; the HUD editor draws them itself while open. */
+    public static void renderHuds(DrawContext ctx, boolean editing) {
+        BarLayout.newFrame();
+        InventoryHud.INSTANCE.render(ctx, editing);
+        hud.render(ctx, editing);
+        DebugOverlay.render(ctx, editing);
+        Timers.render(ctx, editing);
+        KitHud.INSTANCE.render(ctx, editing);
+        GradeHud.INSTANCE.render(ctx, editing);
+        InfoBarHud.render(ctx, editing);
+        ProgressHud.renderAll(ctx, editing);
     }
 
     public static OBFHud getHud() { return hud; }
