@@ -10,6 +10,7 @@ import com.hamtabot.obfutilities.stats.SessionStats;
 import com.hamtabot.obfutilities.stats.StatCounter;
 import com.hamtabot.obfutilities.stats.StatsReader;
 import com.hamtabot.obfutilities.ui.Draw;
+import com.hamtabot.obfutilities.ui.HudElement;
 import com.hamtabot.obfutilities.ui.HudPos;
 import com.hamtabot.obfutilities.ui.Theme;
 import com.hamtabot.obfutilities.util.Format;
@@ -30,7 +31,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 
-public class OBFHud {
+public class OBFHud implements HudElement {
 
     private static final int BASE_PANEL_WIDTH = 220;
     private static final int PADDING          = 6;
@@ -215,16 +216,22 @@ public class OBFHud {
         ctx.drawTextWithShadow(tr, "Disparaît dans " + timer, x, noticeY + s(20), Theme.TEXT_DIM);
     }
 
-    public boolean isInResizeGrip(double mx, double my) {
-        return Draw.inResizeGrip(mx, my, posX + getWidth(), posY + getHeight());
+    /** Always movable in the editor, even while hidden with its key. */
+    @Override public boolean isShown() { return true; }
+
+    @Override public int[] bounds() { return new int[]{ posX, posY, getWidth(), getHeight() }; }
+
+    @Override public float scale() { return OBFUtilities.config.scaleHud; }
+
+    @Override public void setScale(float s) { OBFUtilities.config.scaleHud = ModConfig.clampScale(s); }
+
+    @Override
+    public void resetPos() {
+        OBFUtilities.config.scaleHud = 1f;
+        setPos(10, 10);
     }
 
-    public boolean isMouseOver(double mx, double my) {
-        return Draw.inside(mx, my, posX, posY, getWidth(), getHeight());
-    }
-
-    public int  getPosX() { return posX; }
-    public int  getPosY() { return posY; }
+    @Override
     public void setPos(int x, int y) {
         pos.set(x, y, getWidth(), getHeight());
         posX = x;

@@ -3,33 +3,37 @@ package com.hamtabot.obfutilities.hud;
 import com.hamtabot.obfutilities.OBFUtilities;
 import com.hamtabot.obfutilities.config.ModConfig;
 import com.hamtabot.obfutilities.ui.Draw;
+import com.hamtabot.obfutilities.ui.HudElement;
 import com.hamtabot.obfutilities.ui.Theme;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.item.ItemStack;
 
-public class InventoryHud {
+public final class InventoryHud implements HudElement {
+
+    public static final InventoryHud INSTANCE = new InventoryHud();
 
     private static final int PAD = 5, CELL = 18, PITCH = 19, COLS = 9, HOTBAR_GAP = 5;
     public static final int W = PAD * 2 + COLS * PITCH - 1;
     private static final int H_MAIN = PAD * 2 + 3 * PITCH - 1;
     private static final int H_FULL = H_MAIN + PITCH + HOTBAR_GAP;
-    public static final int DEFAULT_X = 10, DEFAULT_Y = 60;
-    public static final float MIN_SCALE = 0.5f, MAX_SCALE = 2f;
+    private static final int DEFAULT_X = 10, DEFAULT_Y = 60;
 
-    public static void render(DrawContext ctx, boolean editing) {
+    private InventoryHud() {}
+
+    public void render(DrawContext ctx, boolean editing) {
         MinecraftClient client = MinecraftClient.getInstance();
         ModConfig cfg = OBFUtilities.config;
-        if (client.player == null || !cfg.invHudEnabled) return;
+        if (client.player == null || !isShown()) return;
         PlayerInventory inv = client.player.getInventory();
-        float op = cfg.invHudOpacity;
+        float op = cfg.invHudOpacity, scale = scale();
         int[] b = bounds();
         int h = height(), rows = cfg.invHudShowHotbar ? 4 : 3;
 
         ctx.getMatrices().push();
         ctx.getMatrices().translate(b[0], b[1], 0);
-        ctx.getMatrices().scale(cfg.invHudScale, cfg.invHudScale, 1f);
+        ctx.getMatrices().scale(scale, scale, 1f);
 
         // fill/drawText flush the buffer on every call unless wrapped in ctx.draw(Runnable),
         // so backgrounds, items and overlays are each drawn in their own batch
@@ -77,36 +81,28 @@ public class InventoryHud {
 
     private static int height() { return OBFUtilities.config.invHudShowHotbar ? H_FULL : H_MAIN; }
 
-    public static int[] bounds() {
-        MinecraftClient client = MinecraftClient.getInstance();
-        ModConfig cfg = OBFUtilities.config;
-        int w = Math.round(W * cfg.invHudScale), h = Math.round(height() * cfg.invHudScale);
-        int[] p = cfg.invHudPos.resolve(w, h, DEFAULT_X, DEFAULT_Y);
+    @Override public boolean isShown() { return OBFUtilities.config.invHudEnabled; }
+
+    @Override public float scale() { return OBFUtilities.config.invHudScale; }
+
+    @Override public void setScale(float s) { OBFUtilities.config.invHudScale = HudElement.clampScale(s); }
+
+    @Override
+    public int[] bounds() {
+        int w = Math.round(W * scale()), h = Math.round(height() * scale());
+        int[] p = OBFUtilities.config.invHudPos.resolve(w, h, DEFAULT_X, DEFAULT_Y);
         return new int[]{ p[0], p[1], w, h };
     }
 
-    public static boolean isMouseOver(double mx, double my) {
-        if (!OBFUtilities.config.invHudEnabled) return false;
-        int[] b = bounds();
-        return Draw.inside(mx, my, b[0], b[1], b[2], b[3]);
-    }
-
-    public static boolean isInResizeGrip(double mx, double my) {
-        if (!OBFUtilities.config.invHudEnabled) return false;
-        int[] b = bounds();
-        return Draw.inResizeGrip(mx, my, b[0] + b[2], b[1] + b[3]);
-    }
-
-    public static void setPos(int x, int y) {
+    @Override
+    public void setPos(int x, int y) {
         int[] b = bounds();
         OBFUtilities.config.invHudPos.set(x, y, b[2], b[3]);
     }
 
-    public static void setScale(float s) {
-        OBFUtilities.config.invHudScale = clampScale(s);
-    }
-
-    public static float clampScale(float s) {
-        return Math.max(MIN_SCALE, Math.min(MAX_SCALE, s));
+    @Override
+    public void resetPos() {
+        setScale(1f);
+        setPos(DEFAULT_X, DEFAULT_Y);
     }
 }

@@ -3,6 +3,7 @@ package com.hamtabot.obfutilities.bossbar;
 import com.hamtabot.obfutilities.OBFUtilities;
 import com.hamtabot.obfutilities.config.ModConfig;
 import com.hamtabot.obfutilities.ui.Draw;
+import com.hamtabot.obfutilities.ui.HudElement;
 import com.hamtabot.obfutilities.ui.Theme;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
@@ -16,7 +17,6 @@ public final class InfoBarHud {
 
     private static final int PAD = 6, ROW_H = 13, CHIP_GAP = 13, SHRINK_SLACK = 24;
     public static final int DEFAULT_Y = 4;
-    public static final float MIN_SCALE = 0.5f, MAX_SCALE = 2f;
     /** Passes of {@link #drawChip}: everything, only the pack icons, only the text. */
     public static final int ALL = -1, ICONS = 1, TEXT = 2;
 
@@ -35,7 +35,7 @@ public final class InfoBarHud {
 
         @Override
         public void setScale(float s) {
-            OBFUtilities.config.infoBarsScale = clampScale(s);
+            OBFUtilities.config.infoBarsScale = HudElement.clampScale(s);
             BarLayout.invalidate();
         }
 
@@ -200,6 +200,4 @@ public final class InfoBarHud {
             x += p.width();
         }
     }
-
-    public static float clampScale(float s) { return Math.max(MIN_SCALE, Math.min(MAX_SCALE, s)); }
 }

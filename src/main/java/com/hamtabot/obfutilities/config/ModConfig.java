@@ -3,6 +3,7 @@ package com.hamtabot.obfutilities.config;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.hamtabot.obfutilities.timer.TimerEntry;
+import com.hamtabot.obfutilities.ui.HudElement;
 import com.hamtabot.obfutilities.ui.HudPos;
 import com.hamtabot.obfutilities.util.JsonFiles;
 
@@ -201,20 +202,22 @@ public class ModConfig {
         if (adMessage == null) adMessage = "";
         if (afkDimension == null) afkDimension = "minecraft:overworld";
         scaleHud = clampScale(scaleHud);
-        heldItemScale = Math.max(0f, Math.min(1f, heldItemScale));
-        invHudScale = com.hamtabot.obfutilities.hud.InventoryHud.clampScale(invHudScale);
-        kitHudScale = com.hamtabot.obfutilities.kit.KitHud.clampScale(kitHudScale);
-        gradeHudScale = com.hamtabot.obfutilities.grade.GradeHud.clampScale(gradeHudScale);
-        jobBarsScale = com.hamtabot.obfutilities.bossbar.ProgressHud.clampScale(jobBarsScale);
-        skillBarsScale = com.hamtabot.obfutilities.bossbar.ProgressHud.clampScale(skillBarsScale);
-        questBarsScale = com.hamtabot.obfutilities.bossbar.ProgressHud.clampScale(questBarsScale);
-        infoBarsScale = com.hamtabot.obfutilities.bossbar.InfoBarHud.clampScale(infoBarsScale);
-        invHudOpacity = Math.max(0f, Math.min(1f, invHudOpacity));
-        jobBarsOpacity = Math.max(0f, Math.min(1f, jobBarsOpacity));
-        skillBarsOpacity = Math.max(0f, Math.min(1f, skillBarsOpacity));
-        questBarsOpacity = Math.max(0f, Math.min(1f, questBarsOpacity));
-        infoBarsOpacity = Math.max(0f, Math.min(1f, infoBarsOpacity));
+        heldItemScale = clamp01(heldItemScale);
+        invHudScale = HudElement.clampScale(invHudScale);
+        kitHudScale = HudElement.clampScale(kitHudScale);
+        gradeHudScale = HudElement.clampScale(gradeHudScale);
+        jobBarsScale = HudElement.clampScale(jobBarsScale);
+        skillBarsScale = HudElement.clampScale(skillBarsScale);
+        questBarsScale = HudElement.clampScale(questBarsScale);
+        infoBarsScale = HudElement.clampScale(infoBarsScale);
+        invHudOpacity = clamp01(invHudOpacity);
+        jobBarsOpacity = clamp01(jobBarsOpacity);
+        skillBarsOpacity = clamp01(skillBarsOpacity);
+        questBarsOpacity = clamp01(questBarsOpacity);
+        infoBarsOpacity = clamp01(infoBarsOpacity);
     }
+
+    private static float clamp01(float v) { return Math.max(0f, Math.min(1f, v)); }
 
     public static float clampScale(float v) {
         return Math.max(0.6f, Math.min(2.0f, v == 0f ? 1.0f : v));

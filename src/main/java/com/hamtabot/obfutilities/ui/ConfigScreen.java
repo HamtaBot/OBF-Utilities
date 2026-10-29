@@ -355,7 +355,7 @@ public class ConfigScreen extends Screen {
         c.add(new ToggleRow("Activer", "Remplace les barres d'argent, mobcoins, vote party, tokens, d'île ou de claim par une carte au thème du mod.",
                 () -> cfg.infoBarsEnabled, v -> cfg.infoBarsEnabled = v));
         c.add(new SliderRow("Taille", "Taille de la carte d'infos à l'écran.",
-                Math.round(InfoBarHud.MIN_SCALE * 100), Math.round(InfoBarHud.MAX_SCALE * 100),
+                Math.round(HudElement.MIN_SCALE * 100), Math.round(HudElement.MAX_SCALE * 100),
                 () -> Math.round(cfg.infoBarsScale * 100), v -> InfoBarHud.BLOCK.setScale(v / 100f), v -> v + " %"));
         c.add(opacitySlider(BAR_OPACITY_HINT, () -> cfg.infoBarsOpacity, v -> cfg.infoBarsOpacity = v));
         c.add(new ToggleRow("Séparateurs", "Les traits entre les infos et entre les lignes. Ils suivent aussi l'opacité du fond.",
@@ -405,8 +405,8 @@ public class ConfigScreen extends Screen {
         c.add(new SectionTitle("Apparence"));
         c.add(opacitySlider("À 0, seuls les objets restent visibles.", () -> cfg.invHudOpacity, v -> cfg.invHudOpacity = v));
         c.add(new SliderRow("Taille", "Taille du HUD inventaire à l'écran.",
-                Math.round(InventoryHud.MIN_SCALE * 100), Math.round(InventoryHud.MAX_SCALE * 100),
-                () -> Math.round(cfg.invHudScale * 100), v -> InventoryHud.setScale(v / 100f),
+                Math.round(HudElement.MIN_SCALE * 100), Math.round(HudElement.MAX_SCALE * 100),
+                () -> Math.round(cfg.invHudScale * 100), v -> InventoryHud.INSTANCE.setScale(v / 100f),
                 v -> v + " %"));
     }
 
