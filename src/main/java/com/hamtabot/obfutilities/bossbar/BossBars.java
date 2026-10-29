@@ -7,6 +7,8 @@ import com.hamtabot.obfutilities.mixin.BossBarHudAccessor;
 import com.hamtabot.obfutilities.mixin.GlyphRendererAccessor;
 import com.hamtabot.obfutilities.mixin.TextRendererAccessor;
 import com.hamtabot.obfutilities.ui.Theme;
+import it.unimi.dsi.fastutil.chars.Char2BooleanOpenHashMap;
+import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.FontStorage;
 import net.minecraft.client.font.TextRenderer;
@@ -16,58 +18,63 @@ import net.minecraft.text.OrderedText;
 import net.minecraft.text.Style;
 import net.minecraft.text.Text;
 import net.minecraft.text.TextColor;
+import net.minecraft.util.Formatting;
 import net.minecraft.util.Identifier;
 
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.EnumMap;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
  * Reads the server boss bars and sorts them into job (Jobs Reborn), skill (AureliumSkills), info
- * (CustomNameplates) and quest bars.
- * The server rewrites them every tick, so a bar is only re-parsed when its name object changes.
+ * (CustomNameplates) and quest bars. The server rewrites them every tick, so a bar is only re-parsed when its
+ * text actually changes.
  */
 public final class BossBars {
 
-    public enum Kind { OTHER, JOB, SKILL, QUEST, INFO }
-
+    // a number as the plugins print it: "872956.10", "1.234", or shortened like "12k" / "1.5M"
+    private static final String NUM = "(\\d[\\d.,]*(?:[kKmM](?!\\p{L}))?)";
     // %jobfullname% [%joblevel%/9999] %jobxp%/%jobmaxxp% (%gain%)
     private static final Pattern JOB = Pattern.compile(
-            "^\\s*(.+?)\\s*\\[(\\d+)\\s*/\\s*(\\d+)]\\s*([\\d.,]+)\\s*/\\s*([\\d.,]+)(?:\\s*\\(\\s*([^)]*?)\\s*\\))?");
+            "^\\s*(.+?)\\s*\\[(\\d+)\\s*/\\s*\\d+]\\s*" + NUM + "\\s*/\\s*" + NUM + "(?:\\s*\\(\\s*([^)]*?)\\s*\\))?");
     // Skill {skill} Niveau {level}: ({current_xp}/{level_xp}) (+{xp_gained})
-    // the skill plugin shortens big amounts ("12k"), hence the optional suffix on its numbers
     private static final Pattern SKILL = Pattern.compile(
-            "^\\s*Skill\\s+(.+?)\\s+Niveau\\s+([0-9IVXLCDM]+)\\s*:\\s*\\(\\s*([\\d.,]+[kKmM]?)\\s*/\\s*([\\d.,]+[kKmM]?)\\s*\\)(?:\\s*\\(\\s*([^)]*?)\\s*\\))?");
+            "^\\s*Skill\\s+(.+?)\\s+Niveau\\s+([0-9IVXLCDM]+)\\s*:\\s*\\(\\s*" + NUM + "\\s*/\\s*" + NUM + "\\s*\\)(?:\\s*\\(\\s*([^)]*?)\\s*\\))?");
     // {skill} {level} (MAX)
     private static final Pattern SKILL_MAX = Pattern.compile("^\\s*(.+?)\\s+([0-9IVXLCDM]+)\\s*\\(MAX\\)\\s*$");
-    // any other bar holding a progress "x/y": a quest, named by the text before it
-    private static final Pattern PROGRESS = Pattern.compile("(\\d[\\d.,]*(?:[kKmM](?!\\p{L}))?)\\s*/\\s*(\\d[\\d.,]*(?:[kKmM](?!\\p{L}))?)");
+    // the Quests progress placeholder: "[name] - {progress}/{amount} [what it counts]"
+    private static final Pattern QUEST = Pattern.compile("^(.*?)[-–]\\s*" + NUM + "\\s*/\\s*" + NUM + "(.*)$");
     private static final Pattern NAME_END = Pattern.compile("[\\s\\-–:|(\\[]+$");
     private static final Pattern UNIT_EDGES = Pattern.compile("^[\\s)\\]]+|[\\s\\-–:|(\\[]+$");
-    private static final Pattern LEGACY_CODE = Pattern.compile("§.");
+    private static final Pattern SEPARATORS = Pattern.compile("[.,]");
     private static final int MAX_ICON_W = 16, WORD_GAP = 4;
 
     /** {@code dy} recentres a resource pack icon whose glyph sits higher or lower than the text line. */
-    public record Piece(OrderedText text, int width, int gapBefore, float dy) {}
+    public record Piece(OrderedText text, int width, int gapBefore, float dy, boolean icon) {}
 
     /** {@code key} names the info across updates (its label, or its icon when it has none) so it can be hidden. */
     public record Chip(String key, List<Piece> pieces, int width, boolean loading) {}
 
+    /** A bar is a job, skill or quest when {@code bar} is set, an info bar when {@code chips} is, else left alone. */
     private static final class Entry {
         Text name;
-        Kind kind = Kind.OTHER;
         ProgressBar bar;
         List<Chip> chips;
     }
+
+    /** What the pixels of one glyph say: drawn in colour (a pack icon), and the centre of its visible rows. */
+    private record GlyphLook(boolean coloured, float centre) {}
 
     private static final Map<UUID, Entry> ENTRIES = new LinkedHashMap<>();
     private static final Map<ProgressBar.Type, List<ProgressBar>> PROGRESS_BARS = new EnumMap<>(ProgressBar.Type.class);
@@ -77,13 +84,16 @@ public final class BossBars {
     private static final List<List<Chip>> INFOS = new ArrayList<>();
     // every info seen since launch, with its latest value, for the list of the config screen
     private static final Map<String, Chip> KNOWN = new LinkedHashMap<>();
-    private static final Map<String, Boolean> COLOURED = new HashMap<>();
+    // per font, per code point; scanned once until the next resource reload
+    private static final Map<Identifier, Int2ObjectOpenHashMap<GlyphLook>> GLYPHS = new HashMap<>();
+    private static final Char2BooleanOpenHashMap SMALL_CAPS = new Char2BooleanOpenHashMap();
+    private static float textCentre = Float.NaN;
     // resource pack URL of the current server, without its query string (which often carries a version hash)
     private static volatile String serverPack = "";
-    // the HUD asks for the bars several times per frame; they are read once per frame (see newFrame)
-    private static boolean synced;
+    // read at most once per frame: the vanilla bar renderer syncs first, the HUD then reuses it (see newFrame)
+    private static boolean synced, syncedByVanilla;
     // chip keys hidden on the current server, rebuilt when the config list or the server changes
-    private static final java.util.Set<String> HIDDEN = new java.util.HashSet<>();
+    private static final Set<String> HIDDEN = new HashSet<>();
     private static int hiddenVersion = -1;
     private static String hiddenPack;
 
@@ -126,13 +136,13 @@ public final class BossBars {
      * Each server's pack maps the same characters to different icons, so a hidden info is remembered for the
      * server it was hidden on.
      */
-    private static String hiddenKey(Chip chip) { return serverPack + "|" + chip.key(); }
+    private static String hiddenPrefix() { return serverPack + "|"; }
 
     public static boolean isInfoHidden(Chip chip) {
         List<String> list = OBFUtilities.config.infoBarsHidden;
         if (hiddenVersion != list.size() || !serverPack.equals(hiddenPack)) {
             HIDDEN.clear();
-            String prefix = serverPack + "|";
+            String prefix = hiddenPrefix();
             for (String k : list) if (k.startsWith(prefix)) HIDDEN.add(k.substring(prefix.length()));
             hiddenVersion = list.size();
             hiddenPack = serverPack;
@@ -142,14 +152,18 @@ public final class BossBars {
 
     public static void setInfoHidden(Chip chip, boolean hidden) {
         List<String> list = OBFUtilities.config.infoBarsHidden;
-        list.remove(hiddenKey(chip));
-        if (hidden) list.add(hiddenKey(chip));
+        String key = hiddenPrefix() + chip.key();
+        list.remove(key);
+        if (hidden) list.add(key);
         hiddenVersion = -1;
         OBFUtilities.config.save();
     }
 
-    /** Start of a HUD frame: the next request reads the bars again. */
-    public static void newFrame() { synced = false; }
+    /** Start of a HUD frame: keeps the read done by the vanilla bar renderer this frame, else reads again. */
+    public static void newFrame() {
+        synced = syncedByVanilla;
+        syncedByVanilla = false;
+    }
 
     public static void setServerPack(String url) {
         String pack = url == null ? "" : url.replaceFirst("[?#].*$", "");
@@ -166,7 +180,8 @@ public final class BossBars {
     public static void reset() {
         ENTRIES.clear();
         KNOWN.clear();
-        COLOURED.clear();
+        GLYPHS.clear();
+        textCentre = Float.NaN;
         for (List<ProgressBar> list : PROGRESS_BARS.values()) list.clear();
         INFOS.clear();
         InfoBarHud.resetWidth();
@@ -182,8 +197,9 @@ public final class BossBars {
      * the ones the mod doesn't redraw. Returns false, leaving the map untouched, when nothing is hidden.
      */
     public static boolean hideReplaced(Map<UUID, ClientBossBar> bars, Map<UUID, ClientBossBar> backup) {
-        if (!active() || bars.isEmpty()) return false;
+        if (!active()) return false;
         sync(bars);
+        syncedByVanilla = true;
         boolean any = false;
         for (UUID id : bars.keySet()) {
             if (hidden(ENTRIES.get(id))) { any = true; break; }
@@ -200,12 +216,12 @@ public final class BossBars {
     private static boolean hidden(Entry e) {
         if (e == null) return false;
         ModConfig cfg = OBFUtilities.config;
-        return switch (e.kind) {
+        if (e.chips != null) return cfg.infoBarsEnabled;
+        if (e.bar == null) return false;
+        return switch (e.bar.type) {
             case JOB -> cfg.jobBarsEnabled;
             case SKILL -> cfg.skillBarsEnabled;
             case QUEST -> cfg.questBarsEnabled;
-            case INFO -> cfg.infoBarsEnabled;
-            case OTHER -> false;
         };
     }
 
@@ -227,37 +243,40 @@ public final class BossBars {
         ENTRIES.keySet().retainAll(bars.keySet());
         for (ClientBossBar bar : bars.values()) {
             Entry e = ENTRIES.computeIfAbsent(bar.getUuid(), u -> new Entry());
-            if (e.name != bar.getName()) {
-                e.name = bar.getName();
-                classify(e);
+            Text name = bar.getName();
+            if (e.name != name) {
+                // the server sends a new text object every tick, most of the time with the same content
+                boolean changed = !name.equals(e.name);
+                e.name = name;
+                if (changed) classify(e);
             }
             if (e.bar != null) {
                 e.bar.barPercent = bar.getPercent();
                 PROGRESS_BARS.get(e.bar.type).add(e.bar);
-            } else if (e.kind == Kind.INFO) {
+            } else if (e.chips != null) {
                 INFOS.add(e.chips);
             }
         }
     }
 
     private static void classify(Entry e) {
-        String plain = LEGACY_CODE.matcher(e.name.getString()).replaceAll("");
+        String plain = Formatting.strip(e.name.getString());
         e.chips = null;
         Matcher m = JOB.matcher(plain);
         if (m.find()) {
-            bar(e, Kind.JOB, ProgressBar.Type.JOB, m.group(1).trim())
-                    .update(parseLevel(m.group(2)), parseNumber(m.group(4)), parseNumber(m.group(5)), m.group(6), "XP");
+            bar(e, ProgressBar.Type.JOB, m.group(1).trim())
+                    .update(parseLevel(m.group(2)), parseNumber(m.group(3)), parseNumber(m.group(4)), m.group(5), "XP");
             return;
         }
         m = SKILL.matcher(plain);
         if (m.find()) {
-            bar(e, Kind.SKILL, ProgressBar.Type.SKILL, m.group(1).trim())
+            bar(e, ProgressBar.Type.SKILL, m.group(1).trim())
                     .update(parseLevel(m.group(2)), parseNumber(m.group(3)), parseNumber(m.group(4)), m.group(5), "XP");
             return;
         }
         m = SKILL_MAX.matcher(plain);
         if (m.find()) {
-            bar(e, Kind.SKILL, ProgressBar.Type.SKILL, m.group(1).trim()).updateMaxed(parseLevel(m.group(2)));
+            bar(e, ProgressBar.Type.SKILL, m.group(1).trim()).updateMaxed(parseLevel(m.group(2)));
             return;
         }
         // the info bars also hold "x/y" values (vote party), so they are recognised by their font before quests
@@ -265,42 +284,32 @@ public final class BossBars {
         if (chips != null && !chips.isEmpty()) {
             e.bar = null;
             e.chips = chips;
-            e.kind = Kind.INFO;
             for (Chip chip : chips) if (!chip.loading()) KNOWN.put(chip.key(), chip);
             return;
         }
-        if (quest(e, plain)) return;
+        m = QUEST.matcher(plain);
+        if (m.find()) {
+            quest(e, m);
+            return;
+        }
         e.bar = null;
-        e.kind = Kind.OTHER;
     }
 
     /** Keeps the same bar while the name holds, so the fill animation and level-up detection carry over. */
-    private static ProgressBar bar(Entry e, Kind kind, ProgressBar.Type type, String name) {
-        if (e.bar == null || e.bar.type != type || !e.bar.name.equals(name)) e.bar = new ProgressBar(type, name);
-        e.kind = kind;
+    private static ProgressBar bar(Entry e, ProgressBar.Type type, String name) {
+        if (e.bar == null || e.bar.type != type || !e.bar.name().equals(name)) e.bar = new ProgressBar(type, name);
         return e.bar;
     }
 
-    private static boolean quest(Entry e, String plain) {
-        Matcher m = PROGRESS.matcher(plain);
-        int start = -1, end = -1;
-        String cur = null, max = null;
-        while (m.find()) {
-            start = m.start();
-            end = m.end();
-            cur = m.group(1);
-            max = m.group(2);
-        }
-        if (start < 0) return false;
-        String name = NAME_END.matcher(plain.substring(0, start)).replaceAll("").trim();
-        String unit = UNIT_EDGES.matcher(plain.substring(end)).replaceAll("").trim();
-        // the Quests bar is only the progress placeholder (" - 120/2500 Bûches d'acacia"): what it counts names it
+    private static void quest(Entry e, Matcher m) {
+        String name = NAME_END.matcher(m.group(1)).replaceAll("").trim();
+        String unit = UNIT_EDGES.matcher(m.group(4)).replaceAll("").trim();
+        // the Quests bar is often only the progress placeholder (" - 120/2500 Bûches d'acacia"): what it counts names it
         if (name.isEmpty()) {
             name = unit.isEmpty() ? "Quête" : unit;
             unit = "";
         }
-        bar(e, Kind.QUEST, ProgressBar.Type.QUEST, name).update(-1, parseNumber(cur), parseNumber(max), "", unit);
-        return true;
+        bar(e, ProgressBar.Type.QUEST, name).update(-1, parseNumber(m.group(2)), parseNumber(m.group(3)), "", unit);
     }
 
     /** Plain or roman level ("12" or "XII"). */
@@ -319,17 +328,16 @@ public final class BossBars {
     }
 
     /**
-     * Reads "872956.10", "1,234.5", "1.234.567" or "2500". With both separators the last one is the decimal
-     * point; a lone separator followed by exactly three digits groups thousands.
+     * Reads "872956.10", "1,234.5", "1.234.567", "2500" or "12k". With both separators the last one is the
+     * decimal point; a lone separator followed by exactly three digits groups thousands.
      */
     private static double parseNumber(String s) {
-        // "12k" / "1.5M": the separator before a suffix is always the decimal point
-        double factor = 1;
         char suffix = s.isEmpty() ? ' ' : Character.toLowerCase(s.charAt(s.length() - 1));
         if (suffix == 'k' || suffix == 'm') {
-            factor = suffix == 'k' ? 1_000 : 1_000_000;
-            s = s.substring(0, s.length() - 1).replace(',', '.');
-            try { return Double.parseDouble(s) * factor; } catch (NumberFormatException e) { return 0; }
+            // the separator before a suffix is always the decimal point
+            double factor = suffix == 'k' ? 1_000 : 1_000_000;
+            try { return Double.parseDouble(s.substring(0, s.length() - 1).replace(',', '.')) * factor; }
+            catch (NumberFormatException e) { return 0; }
         }
         int dot = s.lastIndexOf('.'), comma = s.lastIndexOf(',');
         int last = Math.max(dot, comma);
@@ -338,7 +346,7 @@ public final class BossBars {
             boolean both = dot >= 0 && comma >= 0;
             boolean repeated = s.indexOf(sep) != last;
             boolean thousands = !both && (repeated || s.length() - last - 1 == 3);
-            String whole = s.substring(0, last).replaceAll("[.,]", "");
+            String whole = SEPARATORS.matcher(s.substring(0, last)).replaceAll("");
             s = thousands ? whole + s.substring(last + 1) : whole + "." + s.substring(last + 1);
         }
         try { return Double.parseDouble(s); } catch (NumberFormatException e) { return 0; }
@@ -369,6 +377,24 @@ public final class BossBars {
         return b.finish();
     }
 
+    private static boolean isSmallCaps(String word) {
+        boolean small = false;
+        for (int i = 0; i < word.length(); i++) {
+            char c = word.charAt(i);
+            if (c < 0x80 && Character.isLetterOrDigit(c)) return false;
+            if (c >= 0x80) small |= SMALL_CAPS.computeIfAbsent(c, (char ch) -> {
+                String n = Character.getName(ch);
+                return n != null && n.contains("SMALL CAPITAL");
+            });
+        }
+        return small;
+    }
+
+    private static boolean hasDigit(String word) {
+        for (int i = 0; i < word.length(); i++) if (Character.isDigit(word.charAt(i))) return true;
+        return false;
+    }
+
     private static final class ChipBuilder {
         private final TextRenderer tr;
         private final List<Chip> chips = new ArrayList<>();
@@ -387,12 +413,12 @@ public final class BossBars {
             if (cp == '§') { skipCode = true; return; }
             if (cp == ' ') { spaces++; return; }
             if (Character.isISOControl(cp) || Character.getType(cp) == Character.FORMAT) return;
-            if (isIcon(cp, font) || isColoured(cp, font)) {
+            if (isIcon(cp, font) || look(cp, font).coloured()) {
                 OrderedText t = Text.literal(Character.toString(cp)).setStyle(Style.EMPTY.withFont(font)).asOrderedText();
                 int w = tr.getWidth(t);
                 if (w <= 0 || w > MAX_ICON_W) return;
                 if (!text.isEmpty()) endChip();
-                icons.add(new Piece(t, w, 0, iconOffset(cp, font)));
+                icons.add(new Piece(t, w, 0, textCentre() - look(cp, font).centre(), true));
                 iconKey.setLength(0);
                 iconKey.appendCodePoint(cp);
             } else {
@@ -405,77 +431,48 @@ public final class BossBars {
 
         void separate() { spaces = Math.max(spaces, 2); }
 
-        // pack icons use their own ascent and padding: line their visible centre up with a capital of the text font
-        private float iconOffset(int cp, Identifier font) {
-            return glyphCentre('A', Style.DEFAULT_FONT_ID) - glyphCentre(cp, font);
+        // pack icons use their own ascent and padding: their visible centre is lined up with a capital of the text font
+        private float textCentre() {
+            if (Float.isNaN(textCentre)) textCentre = look('A', Style.DEFAULT_FONT_ID).centre();
+            return textCentre;
         }
 
-        private float glyphCentre(int cp, Identifier font) {
-            FontStorage storage = ((TextRendererAccessor) tr).obf$getFontStorage(font);
-            if (storage.getGlyph(cp, false) instanceof BitmapGlyphAccessor g) {
-                Float centre = visibleCentre(g);
-                if (centre != null) return centre;
-            }
-            GlyphRendererAccessor r = (GlyphRendererAccessor) storage.getGlyphRenderer(cp);
-            return (r.obf$getMinY() + r.obf$getMaxY()) / 2f;
-        }
-
-        private static Float visibleCentre(BitmapGlyphAccessor g) {
-            try {
-                NativeImage img = g.obf$getImage();
-                int first = -1, last = -1;
-                for (int row = 0; row < g.obf$getHeight(); row++) {
-                    for (int col = 0; col < g.obf$getWidth(); col++) {
-                        if (img.getColor(g.obf$getX() + col, g.obf$getY() + row) >>> 24 == 0) continue;
-                        if (first < 0) first = row;
-                        last = row;
-                        break;
-                    }
-                }
-                if (first < 0) return null;
-                // same origin as the glyph renderer: the top of the glyph sits at 10 - ascent
-                float top = 10 - g.obf$getAscent(), sf = g.obf$getScaleFactor();
-                return top + (first + last + 1) * sf / 2f;
-            } catch (RuntimeException e) {
-                // image already released by a resource reload, or not readable pixel by pixel
-                return null;
-            }
-        }
-
-        private static boolean isSmallCaps(String word) {
-            boolean small = false;
-            for (int i = 0; i < word.length(); i++) {
-                char c = word.charAt(i);
-                if (c < 0x80 && Character.isLetterOrDigit(c)) return false;
-                String name = Character.getName(c);
-                small |= name != null && name.contains("SMALL CAPITAL");
-            }
-            return small;
+        private GlyphLook look(int cp, Identifier font) {
+            return GLYPHS.computeIfAbsent(font, f -> new Int2ObjectOpenHashMap<>()).computeIfAbsent(cp, c -> scan(cp, font));
         }
 
         /**
-         * Text glyphs are white and tinted by the style; a glyph drawn in colour is a pack icon, whatever its
-         * character or font. Scanned once per glyph.
+         * One pass over the glyph's pixels. Text glyphs are white and tinted by the style, so a glyph drawn in
+         * colour is a pack icon whatever its character or font; the opaque rows give its visible centre.
          */
-        private boolean isColoured(int cp, Identifier font) {
-            return COLOURED.computeIfAbsent(font + "#" + cp, k -> {
-                FontStorage storage = ((TextRendererAccessor) tr).obf$getFontStorage(font);
-                if (!(storage.getGlyph(cp, false) instanceof BitmapGlyphAccessor g)) return false;
+        private GlyphLook scan(int cp, Identifier font) {
+            FontStorage storage = ((TextRendererAccessor) tr).obf$getFontStorage(font);
+            if (storage.getGlyph(cp, false) instanceof BitmapGlyphAccessor g) {
                 try {
                     NativeImage img = g.obf$getImage();
+                    int first = -1, last = -1;
+                    boolean coloured = false;
                     for (int row = 0; row < g.obf$getHeight(); row++) {
                         for (int col = 0; col < g.obf$getWidth(); col++) {
                             int c = img.getColor(g.obf$getX() + col, g.obf$getY() + row);
                             if (c >>> 24 == 0) continue;
+                            if (first < 0) first = row;
+                            last = row;
                             int r = c & 0xFF, gr = (c >> 8) & 0xFF, b = (c >> 16) & 0xFF;
-                            if (Math.abs(r - gr) > 24 || Math.abs(gr - b) > 24 || Math.abs(r - b) > 24) return true;
+                            coloured |= Math.abs(r - gr) > 24 || Math.abs(gr - b) > 24 || Math.abs(r - b) > 24;
                         }
                     }
-                } catch (RuntimeException e) {
-                    return false;
+                    if (first >= 0) {
+                        // same origin as the glyph renderer: the top of the glyph sits at 10 - ascent
+                        float top = 10 - g.obf$getAscent(), sf = g.obf$getScaleFactor();
+                        return new GlyphLook(coloured, top + (first + last + 1) * sf / 2f);
+                    }
+                } catch (RuntimeException ignored) {
+                    // image already released by a resource reload, or not readable pixel by pixel
                 }
-                return false;
-            });
+            }
+            GlyphRendererAccessor r = (GlyphRendererAccessor) storage.getGlyphRenderer(cp);
+            return new GlyphLook(false, (r.obf$getMinY() + r.obf$getMaxY()) / 2f);
         }
 
         private static boolean isIcon(int cp, Identifier font) {
@@ -494,14 +491,17 @@ public final class BossBars {
             for (Piece p : icons) width += p.gapBefore() + p.width();
             // labels are written in small capitals on both servers, so anything else next to one is the value
             // (a claim name has no digit); without small capitals, words holding a digit are the values
-            String[] words = text.toString().split(" ");
+            String all = text.toString();
+            String[] words = all.split(" ");
+            boolean[] small = new boolean[words.length];
             boolean smallCapsLabels = false;
-            for (String w : words) smallCapsLabels |= isSmallCaps(w);
+            for (int i = 0; i < words.length; i++) smallCapsLabels |= small[i] = isSmallCaps(words[i]);
             StringBuilder group = new StringBuilder();
             boolean groupValue = false;
-            for (String w : words) {
+            for (int i = 0; i < words.length; i++) {
+                String w = words[i];
                 if (w.isEmpty()) continue;
-                boolean value = smallCapsLabels ? !isSmallCaps(w) : w.chars().anyMatch(Character::isDigit);
+                boolean value = smallCapsLabels ? !small[i] : hasDigit(w);
                 if (!group.isEmpty() && value != groupValue) {
                     width += addText(pieces, group.toString(), groupValue);
                     group.setLength(0);
@@ -513,7 +513,7 @@ public final class BossBars {
             if (!group.isEmpty()) width += addText(pieces, group.toString(), groupValue);
             // icons first: a placeholder still loading shows other text next to the same icon
             String key = !iconKey.isEmpty() ? "icon:" + iconKey : labelKey.toString();
-            boolean loading = text.toString().toLowerCase(Locale.ROOT).contains("chargement");
+            boolean loading = all.toLowerCase(Locale.ROOT).contains("chargement");
             chips.add(new Chip(key, pieces, width, loading));
             icons.clear();
             text.setLength(0);
@@ -526,7 +526,7 @@ public final class BossBars {
             OrderedText t = Text.literal(s).setStyle(Style.EMPTY.withColor(TextColor.fromRgb(color))).asOrderedText();
             int w = tr.getWidth(t);
             int gap = pieces.isEmpty() ? 0 : WORD_GAP;
-            pieces.add(new Piece(t, w, gap, 0));
+            pieces.add(new Piece(t, w, gap, 0, false));
             if (!value) labelKey.append(labelKey.isEmpty() ? "" : " ").append(s);
             return gap + w;
         }

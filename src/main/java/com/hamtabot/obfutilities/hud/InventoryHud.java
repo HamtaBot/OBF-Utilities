@@ -35,12 +35,12 @@ public class InventoryHud {
         // so backgrounds, items and overlays are each drawn in their own batch
         ctx.draw(() -> {
             if (op > 0f) {
-                Draw.card(ctx, 0, 0, W, h, alpha(Theme.WINDOW, op), alpha(Theme.WINDOW_BORDER, op));
+                Draw.card(ctx, 0, 0, W, h, Draw.withOpacity(Theme.WINDOW, op), Draw.withOpacity(Theme.WINDOW_BORDER, op));
                 if (cfg.invHudShowHotbar) {
                     int lineY = PAD + 3 * PITCH - 1 + HOTBAR_GAP / 2;
-                    ctx.fill(PAD, lineY, W - PAD, lineY + 1, alpha(Theme.DIVIDER, op));
+                    ctx.fill(PAD, lineY, W - PAD, lineY + 1, Draw.withOpacity(Theme.DIVIDER, op));
                 }
-                int surface = alpha(Theme.SURFACE, op), border = alpha(Theme.BORDER, op), accent = alpha(Theme.ACCENT, op);
+                int surface = Draw.withOpacity(Theme.SURFACE, op), border = Draw.withOpacity(Theme.BORDER, op), accent = Draw.withOpacity(Theme.ACCENT, op);
                 for (int row = 0; row < rows; row++) {
                     for (int col = 0; col < COLS; col++) {
                         boolean selected = row == 3 && col == inv.selectedSlot;
@@ -76,11 +76,6 @@ public class InventoryHud {
     private static int slotY(int row) { return PAD + row * PITCH + (row == 3 ? HOTBAR_GAP : 0); }
 
     private static int height() { return OBFUtilities.config.invHudShowHotbar ? H_FULL : H_MAIN; }
-
-    private static int alpha(int color, float factor) {
-        int a = Math.round((color >>> 24) * factor);
-        return (a << 24) | (color & 0xFFFFFF);
-    }
 
     public static int[] bounds() {
         MinecraftClient client = MinecraftClient.getInstance();
