@@ -18,7 +18,6 @@ import net.minecraft.text.OrderedText;
 import net.minecraft.text.Style;
 import net.minecraft.text.Text;
 import net.minecraft.text.TextColor;
-import net.minecraft.util.Formatting;
 import net.minecraft.util.Identifier;
 
 import java.util.ArrayList;
@@ -53,10 +52,11 @@ public final class BossBars {
             "^\\s*Skill\\s+(.+?)\\s+Niveau\\s+([0-9IVXLCDM]+)\\s*:\\s*\\(\\s*" + NUM + "\\s*/\\s*" + NUM + "\\s*\\)(?:\\s*\\(\\s*([^)]*?)\\s*\\))?");
     // {skill} {level} (MAX)
     private static final Pattern SKILL_MAX = Pattern.compile("^\\s*(.+?)\\s+([0-9IVXLCDM]+)\\s*\\(MAX\\)\\s*$");
-    // the Quests progress placeholder: "[name] - {progress}/{amount} [what it counts]"
-    private static final Pattern QUEST = Pattern.compile("^(.*?)[-–]\\s*" + NUM + "\\s*/\\s*" + NUM + "(.*)$");
+    // any other bar holding a progress "x/y" is a quest: "[name] {progress}/{amount} [what it counts]"
+    private static final Pattern PROGRESS = Pattern.compile(NUM + "\\s*/\\s*" + NUM);
     private static final Pattern NAME_END = Pattern.compile("[\\s\\-–:|(\\[]+$");
     private static final Pattern UNIT_EDGES = Pattern.compile("^[\\s)\\]]+|[\\s\\-–:|(\\[]+$");
+    private static final Pattern LEGACY_CODE = Pattern.compile("§.");
     private static final Pattern SEPARATORS = Pattern.compile("[.,]");
     private static final int MAX_ICON_W = 16, WORD_GAP = 4;
 
@@ -260,7 +260,7 @@ public final class BossBars {
     }
 
     private static void classify(Entry e) {
-        String plain = Formatting.strip(e.name.getString());
+        String plain = LEGACY_CODE.matcher(e.name.getString()).replaceAll("");
         e.chips = null;
         Matcher m = JOB.matcher(plain);
         if (m.find()) {
@@ -287,11 +287,7 @@ public final class BossBars {
             for (Chip chip : chips) if (!chip.loading()) KNOWN.put(chip.key(), chip);
             return;
         }
-        m = QUEST.matcher(plain);
-        if (m.find()) {
-            quest(e, m);
-            return;
-        }
+        if (quest(e, plain)) return;
         e.bar = null;
     }
 
@@ -301,15 +297,27 @@ public final class BossBars {
         return e.bar;
     }
 
-    private static void quest(Entry e, Matcher m) {
-        String name = NAME_END.matcher(m.group(1)).replaceAll("").trim();
-        String unit = UNIT_EDGES.matcher(m.group(4)).replaceAll("").trim();
+    /** The last "x/y" of the bar is its progress, named by the text before it. */
+    private static boolean quest(Entry e, String plain) {
+        Matcher m = PROGRESS.matcher(plain);
+        int start = -1, end = -1;
+        String cur = null, max = null;
+        while (m.find()) {
+            start = m.start();
+            end = m.end();
+            cur = m.group(1);
+            max = m.group(2);
+        }
+        if (start < 0) return false;
+        String name = NAME_END.matcher(plain.substring(0, start)).replaceAll("").trim();
+        String unit = UNIT_EDGES.matcher(plain.substring(end)).replaceAll("").trim();
         // the Quests bar is often only the progress placeholder (" - 120/2500 Bûches d'acacia"): what it counts names it
         if (name.isEmpty()) {
             name = unit.isEmpty() ? "Quête" : unit;
             unit = "";
         }
-        bar(e, ProgressBar.Type.QUEST, name).update(-1, parseNumber(m.group(2)), parseNumber(m.group(3)), "", unit);
+        bar(e, ProgressBar.Type.QUEST, name).update(-1, parseNumber(cur), parseNumber(max), "", unit);
+        return true;
     }
 
     /** Plain or roman level ("12" or "XII"). */
