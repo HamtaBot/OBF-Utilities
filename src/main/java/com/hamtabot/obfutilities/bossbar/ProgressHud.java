@@ -13,6 +13,7 @@ import net.minecraft.client.util.math.MatrixStack;
 
 import java.util.ArrayList;
 import java.util.IdentityHashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -21,36 +22,37 @@ import java.util.Map;
  * card per bar the server shows, since several jobs, skills or quests can progress at once: the cards
  * sit side by side and wrap when the screen is full.
  */
-public enum ProgressHud implements BarLayout.Element {
+public enum ProgressHud implements BarLayout.Block {
 
-    JOBS(ProgressBar.Type.JOB, 46, true),
-    SKILLS(ProgressBar.Type.SKILL, 92, true),
-    QUESTS(ProgressBar.Type.QUEST, 138, true);
+    JOBS(ProgressBar.Type.JOB, 46),
+    SKILLS(ProgressBar.Type.SKILL, 92),
+    QUESTS(ProgressBar.Type.QUEST, 138);
 
     private static final int PAD = 6, ICON = 10, TEXT_X = PAD + ICON + 4;
     private static final int H = 38, GAP = 3, MIN_W = 190, TRACK_Y = 17, TRACK_H = 7, INFO_Y = 28;
     public static final float MIN_SCALE = 0.5f, MAX_SCALE = 2f;
-    private static final String LEVEL = "Niv. ", LEVEL_UP = "▲ Niv. ";
+    private static final String LEVEL = "Niv. ", LEVEL_UP = "▲ Niv. ", WIDEST_PERCENT = "100,0 %";
     private static final long LEAVE_MS = 320;
     private static final float LEAVE_RISE = 5f, LEAVE_SHRINK = 0.06f;
 
-    public final ProgressBar.Type type;
+    private final ProgressBar.Type type;
     private final int defaultY;
-    private final boolean sideBySide;
     private List<ProgressBar> preview;
     // cards on screen in order, including the ones fading out after the server removed their bar
     private final List<ProgressBar> shown = new ArrayList<>();
     private final Map<ProgressBar, Long> leaving = new IdentityHashMap<>();
+    // what rawBounds measured for this frame's layout, reused by render: {card width, block w, block h, columns}
+    private List<ProgressBar> frameBars;
+    private int[] frameSize;
 
-    ProgressHud(ProgressBar.Type type, int defaultY, boolean sideBySide) {
+    ProgressHud(ProgressBar.Type type, int defaultY) {
         this.type = type;
         this.defaultY = defaultY;
-        this.sideBySide = sideBySide;
     }
 
-    public boolean isShown() { return enabled(OBFUtilities.config); }
-
-    public boolean enabled(ModConfig cfg) {
+    @Override
+    public boolean isShown() {
+        ModConfig cfg = OBFUtilities.config;
         return switch (this) { case JOBS -> cfg.jobBarsEnabled; case SKILLS -> cfg.skillBarsEnabled; case QUESTS -> cfg.questBarsEnabled; };
     }
 
@@ -59,11 +61,13 @@ public enum ProgressHud implements BarLayout.Element {
         switch (this) { case JOBS -> cfg.jobBarsEnabled = v; case SKILLS -> cfg.skillBarsEnabled = v; case QUESTS -> cfg.questBarsEnabled = v; }
     }
 
+    @Override
     public float scale() {
         ModConfig cfg = OBFUtilities.config;
         return switch (this) { case JOBS -> cfg.jobBarsScale; case SKILLS -> cfg.skillBarsScale; case QUESTS -> cfg.questBarsScale; };
     }
 
+    @Override
     public void setScale(float s) {
         ModConfig cfg = OBFUtilities.config;
         s = clampScale(s);
@@ -78,7 +82,6 @@ public enum ProgressHud implements BarLayout.Element {
 
     public void setOpacity(float o) {
         ModConfig cfg = OBFUtilities.config;
-        o = Math.max(0f, Math.min(1f, o));
         switch (this) { case JOBS -> cfg.jobBarsOpacity = o; case SKILLS -> cfg.skillBarsOpacity = o; case QUESTS -> cfg.questBarsOpacity = o; }
     }
 
@@ -91,9 +94,10 @@ public enum ProgressHud implements BarLayout.Element {
         for (ProgressHud hud : values()) hud.render(ctx, editing);
     }
 
-    private List<ProgressBar> bars(boolean editing) {
+    /** In the editor: the live bars, or a sample card so the block can be placed before any bar shows up. */
+    private List<ProgressBar> liveOrPreview() {
         List<ProgressBar> live = BossBars.bars(type);
-        if (!live.isEmpty() || !editing) return live;
+        if (!live.isEmpty()) return live;
         if (preview == null) preview = List.of(ProgressBar.preview(type));
         return preview;
     }
@@ -111,22 +115,25 @@ public enum ProgressHud implements BarLayout.Element {
             int slot = -1;
             for (int i = 0; i < shown.size(); i++) {
                 ProgressBar old = shown.get(i);
-                if (leaving.containsKey(old) && old.name.equals(bar.name)) { slot = i; break; }
+                if (leaving.containsKey(old) && old.name().equals(bar.name())) { slot = i; break; }
             }
             if (slot >= 0) {
-                leaving.remove(shown.get(slot));
-                bar.fill.set(shown.get(slot).fill.update(shown.get(slot).target(), 0f));
+                ProgressBar old = shown.get(slot);
+                leaving.remove(old);
+                bar.fill.set(old.fill.value());
                 shown.set(slot, bar);
             } else {
                 shown.add(bar);
             }
         }
-        shown.removeIf(bar -> {
+        for (Iterator<ProgressBar> it = shown.iterator(); it.hasNext(); ) {
+            ProgressBar bar = it.next();
             Long start = leaving.get(bar);
-            if (start == null || now - start < LEAVE_MS) return false;
-            leaving.remove(bar);
-            return true;
-        });
+            if (start != null && now - start >= LEAVE_MS) {
+                leaving.remove(bar);
+                it.remove();
+            }
+        }
         return shown;
     }
 
@@ -138,11 +145,15 @@ public enum ProgressHud implements BarLayout.Element {
         return 1f - (1f - t) * (1f - t);
     }
 
+    /** Measured once per text change: the card strings only change when the server updates the bar. */
     private static int cardWidth(TextRenderer tr, ProgressBar bar) {
-        int left = TEXT_X + tr.getWidth(bar.name()) + (bar.gain.isEmpty() ? 0 : 4 + tr.getWidth(bar.gain));
-        int right = bar.levelText.isEmpty() ? 0 : 10 + tr.getWidth(LEVEL_UP + bar.levelText);
-        int bottom = PAD + tr.getWidth(bar.progressText) + 10 + tr.getWidth("100,0 %");
-        return Math.max(MIN_W, Math.max(left + right, bottom) + PAD);
+        if (bar.cardWidth < 0) {
+            int left = TEXT_X + tr.getWidth(bar.name()) + (bar.gain.isEmpty() ? 0 : 4 + tr.getWidth(bar.gain));
+            int right = bar.levelText.isEmpty() ? 0 : 10 + tr.getWidth(LEVEL_UP) + tr.getWidth(bar.levelText);
+            int bottom = PAD + tr.getWidth(bar.progressText) + 10 + tr.getWidth(WIDEST_PERCENT);
+            bar.cardWidth = Math.max(MIN_W, Math.max(left + right, bottom) + PAD);
+        }
+        return bar.cardWidth;
     }
 
     /** {card width, block width, block height, columns}, unscaled. */
@@ -150,7 +161,7 @@ public enum ProgressHud implements BarLayout.Element {
         int w = MIN_W;
         for (ProgressBar bar : bars) w = Math.max(w, cardWidth(tr, bar));
         int n = bars.size(), cols = 1;
-        if (sideBySide && n > 1) {
+        if (n > 1) {
             int room = Math.round(MinecraftClient.getInstance().getWindow().getScaledWidth() / scale());
             cols = Math.max(1, Math.min(n, (room + GAP) / (w + GAP)));
         }
@@ -158,16 +169,15 @@ public enum ProgressHud implements BarLayout.Element {
         return new int[]{ w, cols * w + (cols - 1) * GAP, rows * H + Math.max(0, rows - 1) * GAP, cols };
     }
 
-    private List<ProgressBar> current(boolean editing) {
-        return editing ? bars(true) : shownBars();
-    }
-
     @Override
     public int[] rawBounds(boolean editing) {
+        frameBars = null;
         if (MinecraftClient.getInstance().player == null || !isShown()) return null;
-        List<ProgressBar> bars = current(editing);
+        List<ProgressBar> bars = editing ? liveOrPreview() : shownBars();
         if (bars.isEmpty()) return null;
         int[] sz = size(MinecraftClient.getInstance().textRenderer, bars);
+        frameBars = bars;
+        frameSize = sz;
         float scale = scale();
         int w = Math.round(sz[1] * scale), h = Math.round(sz[2] * scale);
         int screenW = MinecraftClient.getInstance().getWindow().getScaledWidth();
@@ -183,27 +193,28 @@ public enum ProgressHud implements BarLayout.Element {
             return;
         }
         int[] b = BarLayout.bounds(this, editing);
-        if (b == null) return;
-        List<ProgressBar> bars = current(editing);
-        if (bars.isEmpty()) return;
+        if (b == null || frameBars == null) return;
+        List<ProgressBar> bars = frameBars;
         TextRenderer tr = client.textRenderer;
-        int[] sz = size(tr, bars);
-        int w = sz[0], cols = sz[3];
-        float scale = scale();
+        int w = frameSize[0], cols = frameSize[3];
+        float scale = scale(), opacity = opacity();
         MatrixStack m = ctx.getMatrices();
 
         m.push();
         m.translate(b[0], b[1], 0);
         m.scale(scale, scale, 1f);
-        float opacity = opacity();
-        // every steady card in one batch, icons included; only a card fading out needs a batch of its own
+        // backgrounds, then icons, then text for every card: switching render layer flushes the buffer,
+        // so drawing layer by layer costs three draws per block instead of several per card
         ctx.draw(() -> {
-            for (int i = 0; i < bars.size(); i++) {
-                if (!editing && leaving.containsKey(bars.get(i))) continue;
-                m.push();
-                m.translate(cardX(i, cols, w), cardY(i, cols), 0);
-                renderCard(ctx, tr, bars.get(i), 0, w, editing, opacity);
-                m.pop();
+            for (int pass = 0; pass < 3; pass++) {
+                for (int i = 0; i < bars.size(); i++) {
+                    ProgressBar bar = bars.get(i);
+                    if (!editing && leaving.containsKey(bar)) continue;
+                    m.push();
+                    m.translate(cardX(i, cols, w), cardY(i, cols), 0);
+                    drawPass(ctx, tr, bar, pass, w, editing, opacity);
+                    m.pop();
+                }
             }
         });
         if (!editing && !leaving.isEmpty()) {
@@ -212,7 +223,7 @@ public enum ProgressHud implements BarLayout.Element {
                 if (!leaving.containsKey(bar)) continue;
                 m.push();
                 m.translate(cardX(i, cols, w), cardY(i, cols), 0);
-                renderLeaving(ctx, tr, bar, 0, w, leaveProgress(bar), opacity);
+                renderLeaving(ctx, tr, bar, w, leaveProgress(bar), opacity);
                 m.pop();
             }
         }
@@ -226,30 +237,56 @@ public enum ProgressHud implements BarLayout.Element {
     private static int cardY(int i, int cols) { return (i / cols) * (H + GAP); }
 
     /** A removed card fades out while rising a little and shrinking towards its centre. */
-    private static void renderLeaving(DrawContext ctx, TextRenderer tr, ProgressBar bar, int y, int w, float t, float opacity) {
+    private static void renderLeaving(DrawContext ctx, TextRenderer tr, ProgressBar bar, int w, float t, float opacity) {
         float alpha = 1f - t;
         if (alpha <= 0.02f) return;
         MatrixStack m = ctx.getMatrices();
         m.push();
         float s = 1f - LEAVE_SHRINK * t;
-        m.translate(w / 2f, y + H / 2f - LEAVE_RISE * t, 0);
+        m.translate(w / 2f, H / 2f - LEAVE_RISE * t, 0);
         m.scale(s, s, 1f);
-        m.translate(-w / 2f, -(y + H / 2f), 0);
+        m.translate(-w / 2f, -H / 2f, 0);
         // the shader colour fades fills, text and icon together; it has to stay set until the batch is flushed
         RenderSystem.setShaderColor(1f, 1f, 1f, alpha);
-        ctx.draw(() -> renderCard(ctx, tr, bar, y, w, false, opacity));
+        ctx.draw(() -> {
+            for (int pass = 0; pass < 3; pass++) drawPass(ctx, tr, bar, pass, w, false, opacity);
+        });
         RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
         m.pop();
     }
 
-    /** {@code opacity} only fades the card background: the text and the progress bar stay readable. */
-    private static void renderCard(DrawContext ctx, TextRenderer tr, ProgressBar bar, int y, int w, boolean editing, float opacity) {
-        boolean levelUp = bar.justLeveledUp();
-        int border = levelUp ? Theme.SUCCESS : editing ? Theme.ACCENT : Draw.withOpacity(Theme.WINDOW_BORDER, opacity);
-        Draw.ringCard(ctx, 0, y, w, H, Draw.withOpacity(Theme.WINDOW, opacity), border);
-        Draw.itemSprite(ctx, bar.icon, PAD, y + PAD - 1, ICON);
+    /** One layer of a card at the matrix origin: 0 = background and bar, 1 = icon, 2 = text. */
+    private static void drawPass(DrawContext ctx, TextRenderer tr, ProgressBar bar, int pass, int w, boolean editing, float opacity) {
+        switch (pass) {
+            case 0 -> drawBackground(ctx, bar, w, editing, opacity);
+            case 1 -> Draw.itemSprite(ctx, bar.icon, PAD, PAD - 1, ICON);
+            default -> drawText(ctx, tr, bar, w);
+        }
+    }
 
-        int ty = y + PAD + 1;
+    /** {@code opacity} only fades the card background: the text and the progress bar stay readable. */
+    private static void drawBackground(DrawContext ctx, ProgressBar bar, int w, boolean editing, float opacity) {
+        int border = bar.justLeveledUp() ? Theme.SUCCESS : editing ? Theme.ACCENT : Draw.withOpacity(Theme.WINDOW_BORDER, opacity);
+        Draw.card(ctx, 0, 0, w, H, Draw.withOpacity(Theme.WINDOW, opacity), border);
+
+        int tx = PAD, tw = w - PAD * 2;
+        Draw.card(ctx, tx, TRACK_Y, tw, TRACK_H, Theme.INPUT, Theme.BORDER);
+        int filled = Math.round((tw - 2) * bar.fill.update(bar.target(), 10f));
+        if (filled > 0) {
+            int fy = TRACK_Y + 1, fh = TRACK_H - 2;
+            int steps = Math.min(ProgressBar.GRADIENT_STEPS, filled);
+            for (int i = 0; i < steps; i++) {
+                int x0 = tx + 1 + filled * i / steps, x1 = tx + 1 + filled * (i + 1) / steps;
+                ctx.fill(x0, fy, x1, fy + fh, bar.gradient[i * ProgressBar.GRADIENT_STEPS / steps]);
+            }
+            // light top edge so the fill reads as a bar, not a flat block
+            ctx.fill(tx + 1, fy, tx + 1 + filled, fy + 1, 0x33FFFFFF);
+        }
+    }
+
+    private static void drawText(DrawContext ctx, TextRenderer tr, ProgressBar bar, int w) {
+        boolean levelUp = bar.justLeveledUp();
+        int ty = PAD + 1;
         int right = w - PAD;
         if (!bar.levelText.isEmpty()) {
             int x = right - tr.getWidth(bar.levelText);
@@ -265,51 +302,19 @@ public enum ProgressHud implements BarLayout.Element {
         ctx.drawText(tr, name, TEXT_X, ty, bar.color, false);
         if (!gain.isEmpty()) ctx.drawText(tr, gain, TEXT_X + tr.getWidth(name) + 4, ty, Theme.SUCCESS, false);
 
-        int tx = PAD, tw = w - PAD * 2;
-        Draw.card(ctx, tx, y + TRACK_Y, tw, TRACK_H, Theme.INPUT, Theme.BORDER);
-        int inner = tw - 2;
-        int filled = Math.round(inner * bar.fill.update(bar.target(), 10f));
-        if (filled > 0) {
-            int fy = y + TRACK_Y + 1, fh = TRACK_H - 2;
-            int steps = Math.min(ProgressBar.GRADIENT_STEPS, filled);
-            for (int i = 0; i < steps; i++) {
-                int x0 = tx + 1 + filled * i / steps, x1 = tx + 1 + filled * (i + 1) / steps;
-                ctx.fill(x0, fy, x1, fy + fh, bar.gradient[i * ProgressBar.GRADIENT_STEPS / steps]);
-            }
-            // light top edge so the fill reads as a bar, not a flat block
-            ctx.fill(tx + 1, fy, tx + 1 + filled, fy + 1, 0x33FFFFFF);
-        }
-
-        int iy = y + INFO_Y;
-        ctx.drawText(tr, bar.progressText, PAD, iy, Theme.TEXT_MUTED, false);
+        ctx.drawText(tr, bar.progressText, PAD, INFO_Y, Theme.TEXT_MUTED, false);
         String pct = bar.percentText();
-        ctx.drawText(tr, pct, w - PAD - tr.getWidth(pct), iy, bar.maxed ? Theme.SUCCESS : bar.color, false);
+        ctx.drawText(tr, pct, w - PAD - tr.getWidth(pct), INFO_Y, bar.maxed ? Theme.SUCCESS : bar.color, false);
     }
 
-    /** Where the block is drawn in the HUD editor, after the other blocks were moved out of its way. */
-    public int[] bounds() {
-        int[] b = BarLayout.bounds(this, true);
-        return b != null ? b : new int[]{ 0, 0, 0, 0 };
-    }
-
-    public boolean isMouseOver(double mx, double my) {
-        if (!isShown()) return false;
-        int[] b = bounds();
-        return Draw.inside(mx, my, b[0], b[1], b[2], b[3]);
-    }
-
-    public boolean isInResizeGrip(double mx, double my) {
-        if (!isShown()) return false;
-        int[] b = bounds();
-        return Draw.inResizeGrip(mx, my, b[0] + b[2], b[1] + b[3]);
-    }
-
+    @Override
     public void setPos(int x, int y) {
         int[] b = bounds();
         pos().set(x, y, b[2], b[3]);
         BarLayout.invalidate();
     }
 
+    @Override
     public void resetPos() {
         setScale(1f);
         int[] b = bounds();

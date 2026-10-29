@@ -30,8 +30,7 @@ public class HudEditScreen extends Screen {
     private boolean draggingInv = false, resizingInv = false;
     private boolean draggingKits = false, resizingKits = false;
     private boolean draggingGrades = false, resizingGrades = false;
-    private ProgressHud draggedBars = null, resizedBars = null;
-    private boolean draggingInfo = false, resizingInfo = false;
+    private BarLayout.Block draggedBlock = null, resizedBlock = null;
     private int dragOffX, dragOffY;
     private double resizeStartX;
     private float resizeStartScale;
@@ -68,7 +67,7 @@ public class HudEditScreen extends Screen {
 
         float scale = resizingHud ? OBFUtilities.config.scaleHud : resizingInv ? OBFUtilities.config.invHudScale
                 : resizingKits ? OBFUtilities.config.kitHudScale : resizingGrades ? OBFUtilities.config.gradeHudScale
-                : resizedBars != null ? resizedBars.scale() : resizingInfo ? OBFUtilities.config.infoBarsScale : resizingTimer >= 0 ? Timers.all().get(resizingTimer).scale : -1;
+                : resizedBlock != null ? resizedBlock.scale() : resizingTimer >= 0 ? Timers.all().get(resizingTimer).scale : -1;
         if (scale > 0) ctx.drawTooltip(textRenderer, Text.literal(Math.round(scale * 100) + " %"), mouseX, mouseY);
     }
 
@@ -111,9 +110,7 @@ public class HudEditScreen extends Screen {
         KitHud.setPos(KitHud.DEFAULT_X, KitHud.DEFAULT_Y);
         cfg.gradeHudScale = 1.0f;
         GradeHud.setPos(GradeHud.DEFAULT_X, GradeHud.DEFAULT_Y);
-        for (ProgressHud bars : ProgressHud.values()) bars.resetPos();
-        cfg.infoBarsScale = 1.0f;
-        InfoBarHud.resetPos();
+        for (BarLayout.Block block : BarLayout.blocks()) block.resetPos();
         DebugOverlay.setPos(DebugOverlay.Element.FPS,    10, height - 80);
         DebugOverlay.setPos(DebugOverlay.Element.COORDS, 10, height - 62);
         DebugOverlay.setPos(DebugOverlay.Element.RAM,    10, height - 44);
@@ -166,35 +163,21 @@ public class HudEditScreen extends Screen {
                 return true;
             }
         }
-        for (ProgressHud bars : ProgressHud.values()) {
-            if (bars.isInResizeGrip(mouseX, mouseY)) {
-                resizedBars = bars;
+        for (BarLayout.Block block : BarLayout.blocks()) {
+            if (block.isInResizeGrip(mouseX, mouseY)) {
+                resizedBlock = block;
                 resizeStartX = mouseX;
-                resizeStartScale = bars.scale();
+                resizeStartScale = block.scale();
                 return true;
             }
-            if (bars.isMouseOver(mouseX, mouseY)) {
-                int[] b = bars.bounds();
-                draggedBars = bars;
-                BarLayout.setPriority(bars);
+            if (block.isMouseOver(mouseX, mouseY)) {
+                int[] b = block.bounds();
+                draggedBlock = block;
+                BarLayout.setPriority(block);
                 dragOffX = (int) mouseX - b[0];
                 dragOffY = (int) mouseY - b[1];
                 return true;
             }
-        }
-        if (InfoBarHud.isInResizeGrip(mouseX, mouseY)) {
-            resizingInfo = true;
-            resizeStartX = mouseX;
-            resizeStartScale = OBFUtilities.config.infoBarsScale;
-            return true;
-        }
-        if (InfoBarHud.isMouseOver(mouseX, mouseY)) {
-            int[] b = InfoBarHud.bounds();
-            draggingInfo = true;
-            BarLayout.setPriority(InfoBarHud.LAYOUT);
-            dragOffX = (int) mouseX - b[0];
-            dragOffY = (int) mouseY - b[1];
-            return true;
         }
         if (GradeHud.isInResizeGrip(mouseX, mouseY)) {
             resizingGrades = true;
@@ -260,24 +243,14 @@ public class HudEditScreen extends Screen {
             InventoryHud.setScale(resizeStartScale + (float) (mouseX - resizeStartX) / 200f);
             return true;
         }
-        if (resizedBars != null) {
-            resizedBars.setScale(resizeStartScale + (float) (mouseX - resizeStartX) / 200f);
+        if (resizedBlock != null) {
+            resizedBlock.setScale(resizeStartScale + (float) (mouseX - resizeStartX) / 200f);
             return true;
         }
-        if (draggedBars != null) {
-            int[] b = draggedBars.bounds();
+        if (draggedBlock != null) {
+            int[] b = draggedBlock.bounds();
             int[] p = snap((int) mouseX - dragOffX, (int) mouseY - dragOffY, b[2], b[3]);
-            draggedBars.setPos(p[0], p[1]);
-            return true;
-        }
-        if (resizingInfo) {
-            InfoBarHud.setScale(resizeStartScale + (float) (mouseX - resizeStartX) / 200f);
-            return true;
-        }
-        if (draggingInfo) {
-            int[] b = InfoBarHud.bounds();
-            int[] p = snap((int) mouseX - dragOffX, (int) mouseY - dragOffY, b[2], b[3]);
-            InfoBarHud.setPos(p[0], p[1]);
+            draggedBlock.setPos(p[0], p[1]);
             return true;
         }
         if (resizingGrades) {
@@ -355,9 +328,8 @@ public class HudEditScreen extends Screen {
         draggingInv = resizingInv = false;
         draggingKits = resizingKits = false;
         draggingGrades = resizingGrades = false;
-        draggedBars = resizedBars = null;
+        draggedBlock = resizedBlock = null;
         BarLayout.setPriority(null);
-        draggingInfo = resizingInfo = false;
         draggedOverlay = null;
         draggedTimer = resizingTimer = -1;
         guideX = guideY = -1;
@@ -367,15 +339,12 @@ public class HudEditScreen extends Screen {
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double amount) {
         int timer = timerAt(mouseX, mouseY);
-        for (ProgressHud bars : ProgressHud.values()) {
-            if (timer < 0 && bars.isMouseOver(mouseX, mouseY)) {
-                bars.setScale(bars.scale() + (float) amount * 0.1f);
+        if (timer < 0) {
+            for (BarLayout.Block block : BarLayout.blocks()) {
+                if (!block.isMouseOver(mouseX, mouseY)) continue;
+                block.setScale(block.scale() + (float) amount * 0.1f);
                 return true;
             }
-        }
-        if (timer < 0 && InfoBarHud.isMouseOver(mouseX, mouseY)) {
-            InfoBarHud.setScale(OBFUtilities.config.infoBarsScale + (float) amount * 0.1f);
-            return true;
         }
         if (timer < 0 && GradeHud.isMouseOver(mouseX, mouseY)) {
             GradeHud.setScale(OBFUtilities.config.gradeHudScale + (float) amount * 0.1f);

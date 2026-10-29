@@ -34,22 +34,21 @@ public final class Draw {
         ctx.fill(x + w - 1, y + 1, x + w, y + h - 1, color);
     }
 
-    public static void card(DrawContext ctx, int x, int y, int w, int h, int fill, int border) {
-        round(ctx, x, y, w, h, border);
-        round(ctx, x + 1, y + 1, w - 2, h - 2, fill);
-    }
-
     /**
-     * Same look as {@link #card}, but the border is only drawn as a ring instead of under the fill, so a
-     * see-through fill shows what is behind the card and not the border colour.
+     * A rounded card. The border is drawn as a ring around the fill rather than under it, so a see-through
+     * fill shows what is behind the card and not the border colour.
      */
-    public static void ringCard(DrawContext ctx, int x, int y, int w, int h, int fill, int border) {
-        if (w <= 4 || h <= 4) { card(ctx, x, y, w, h, fill, border); return; }
+    public static void card(DrawContext ctx, int x, int y, int w, int h, int fill, int border) {
+        if (w <= 4 || h <= 4) {
+            round(ctx, x, y, w, h, border);
+            round(ctx, x + 1, y + 1, w - 2, h - 2, fill);
+            return;
+        }
         ctx.fill(x + 1, y, x + w - 1, y + 1, border);
         ctx.fill(x + 1, y + h - 1, x + w - 1, y + h, border);
         ctx.fill(x, y + 1, x + 1, y + h - 1, border);
         ctx.fill(x + w - 1, y + 1, x + w, y + h - 1, border);
-        // card() leaves these four pixels of the border showing inside the rounded fill
+        // the rounded fill leaves these four corner pixels to the border
         ctx.fill(x + 1, y + 1, x + 2, y + 2, border);
         ctx.fill(x + w - 2, y + 1, x + w - 1, y + 2, border);
         ctx.fill(x + 1, y + h - 2, x + 2, y + h - 1, border);

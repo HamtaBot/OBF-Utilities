@@ -40,6 +40,8 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 public class ConfigScreen extends Screen {
 
@@ -354,8 +356,8 @@ public class ConfigScreen extends Screen {
                 () -> cfg.infoBarsEnabled, v -> cfg.infoBarsEnabled = v));
         c.add(new SliderRow("Taille", "Taille de la carte d'infos à l'écran.",
                 Math.round(InfoBarHud.MIN_SCALE * 100), Math.round(InfoBarHud.MAX_SCALE * 100),
-                () -> Math.round(cfg.infoBarsScale * 100), v -> InfoBarHud.setScale(v / 100f), v -> v + " %"));
-        c.add(opacitySlider(() -> cfg.infoBarsOpacity, v -> cfg.infoBarsOpacity = v));
+                () -> Math.round(cfg.infoBarsScale * 100), v -> InfoBarHud.BLOCK.setScale(v / 100f), v -> v + " %"));
+        c.add(opacitySlider(BAR_OPACITY_HINT, () -> cfg.infoBarsOpacity, v -> cfg.infoBarsOpacity = v));
         c.add(new ToggleRow("Séparateurs", "Les traits entre les infos et entre les lignes. Ils suivent aussi l'opacité du fond.",
                 () -> cfg.infoBarsSeparators, v -> cfg.infoBarsSeparators = v));
         InfoChipList infoList = new InfoChipList();
@@ -381,11 +383,13 @@ public class ConfigScreen extends Screen {
         c.add(new SliderRow("Taille", "Taille de ces barres à l'écran.",
                 Math.round(ProgressHud.MIN_SCALE * 100), Math.round(ProgressHud.MAX_SCALE * 100),
                 () -> Math.round(hud.scale() * 100), v -> hud.setScale(v / 100f), v -> v + " %"));
-        c.add(opacitySlider(() -> hud.opacity(), hud::setOpacity));
+        c.add(opacitySlider(BAR_OPACITY_HINT, hud::opacity, hud::setOpacity));
     }
 
-    private SliderRow opacitySlider(java.util.function.Supplier<Float> getter, java.util.function.Consumer<Float> setter) {
-        return new SliderRow("Opacité du fond", "À 0, seuls le texte et la barre de progression restent visibles.",
+    private static final String BAR_OPACITY_HINT = "À 0, seuls le texte et la barre de progression restent visibles.";
+
+    private static SliderRow opacitySlider(String description, Supplier<Float> getter, Consumer<Float> setter) {
+        return new SliderRow("Opacité du fond", description,
                 0, 100, () -> Math.round(getter.get() * 100), v -> setter.accept(v / 100f),
                 v -> v == 0 ? "Transparent" : v == 100 ? "Opaque" : v + " %");
     }
@@ -399,9 +403,7 @@ public class ConfigScreen extends Screen {
                 "Modifier", Draw.ButtonStyle.PRIMARY, this::openHudEditor));
 
         c.add(new SectionTitle("Apparence"));
-        c.add(new SliderRow("Opacité du fond", "À 0, seuls les objets restent visibles.",
-                0, 100, () -> Math.round(cfg.invHudOpacity * 100), v -> cfg.invHudOpacity = v / 100f,
-                v -> v == 0 ? "Transparent" : v == 100 ? "Opaque" : v + " %"));
+        c.add(opacitySlider("À 0, seuls les objets restent visibles.", () -> cfg.invHudOpacity, v -> cfg.invHudOpacity = v));
         c.add(new SliderRow("Taille", "Taille du HUD inventaire à l'écran.",
                 Math.round(InventoryHud.MIN_SCALE * 100), Math.round(InventoryHud.MAX_SCALE * 100),
                 () -> Math.round(cfg.invHudScale * 100), v -> InventoryHud.setScale(v / 100f),

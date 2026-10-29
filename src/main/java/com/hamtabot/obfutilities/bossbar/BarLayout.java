@@ -1,5 +1,6 @@
 package com.hamtabot.obfutilities.bossbar;
 
+import com.hamtabot.obfutilities.ui.Draw;
 import net.minecraft.client.MinecraftClient;
 
 import java.util.ArrayList;
@@ -19,20 +20,50 @@ public final class BarLayout {
         int[] rawBounds(boolean editing);
     }
 
+    /** A block the HUD editor moves and resizes. */
+    public interface Block extends Element {
+        boolean isShown();
+
+        float scale();
+
+        void setScale(float s);
+
+        void setPos(int x, int y);
+
+        void resetPos();
+
+        /** Where the block is drawn in the HUD editor, after the other blocks were moved out of its way. */
+        default int[] bounds() {
+            int[] b = BarLayout.bounds(this, true);
+            return b != null ? b : new int[4];
+        }
+
+        default boolean isMouseOver(double mx, double my) {
+            if (!isShown()) return false;
+            int[] b = bounds();
+            return Draw.inside(mx, my, b[0], b[1], b[2], b[3]);
+        }
+
+        default boolean isInResizeGrip(double mx, double my) {
+            if (!isShown()) return false;
+            int[] b = bounds();
+            return Draw.inResizeGrip(mx, my, b[0] + b[2], b[1] + b[3]);
+        }
+    }
+
     private static final int GAP = 4;
 
+    private static final List<Block> BLOCKS = List.of(InfoBarHud.BLOCK, ProgressHud.JOBS, ProgressHud.SKILLS, ProgressHud.QUESTS);
     private static final Map<Element, int[]> PLACED = new IdentityHashMap<>();
+    private static final List<int[]> TAKEN = new ArrayList<>();
     private static boolean valid, validEditing;
     /** The block being dragged in the editor goes first, so it never jumps away from the mouse. */
-    private static Element priority;
+    private static Block priority;
 
     private BarLayout() {}
 
-    private static List<Element> order() {
-        List<Element> order = new ArrayList<>(List.of(InfoBarHud.LAYOUT, ProgressHud.JOBS, ProgressHud.SKILLS, ProgressHud.QUESTS));
-        if (priority != null && order.remove(priority)) order.add(0, priority);
-        return order;
-    }
+    /** The blocks in placement order. */
+    public static List<Block> blocks() { return BLOCKS; }
 
     public static void invalidate() { valid = false; }
 
@@ -42,8 +73,8 @@ public final class BarLayout {
         valid = false;
     }
 
-    public static void setPriority(Element e) {
-        priority = e;
+    public static void setPriority(Block b) {
+        priority = b;
         invalidate();
     }
 
@@ -54,26 +85,28 @@ public final class BarLayout {
 
     private static void resolve(boolean editing) {
         PLACED.clear();
+        TAKEN.clear();
         int screenH = MinecraftClient.getInstance().getWindow().getScaledHeight();
-        List<int[]> taken = new ArrayList<>();
-        for (Element e : order()) {
-            int[] r = e.rawBounds(editing);
-            if (r == null) continue;
-            r = r.clone();
-            // every push moves the block strictly down, so this ends after at most one pass per placed block
-            for (int pass = 0; pass <= taken.size(); pass++) {
-                int[] hit = null;
-                for (int[] t : taken) if (overlaps(r, t)) { hit = t; break; }
-                if (hit == null) break;
-                r[1] = hit[1] + hit[3] + GAP;
-            }
-            // pushed off the bottom: sit right above the lowest block in the way instead
-            if (r[1] + r[3] > screenH) r[1] = Math.max(0, screenH - r[3]);
-            taken.add(r);
-            PLACED.put(e, r);
-        }
+        if (priority != null) place(priority, editing, screenH);
+        for (Block b : BLOCKS) if (b != priority) place(b, editing, screenH);
         valid = true;
         validEditing = editing;
+    }
+
+    private static void place(Block e, boolean editing, int screenH) {
+        int[] r = e.rawBounds(editing);
+        if (r == null) return;
+        // every push moves the block strictly down, so this ends after at most one pass per placed block
+        for (int pass = 0; pass <= TAKEN.size(); pass++) {
+            int[] hit = null;
+            for (int[] t : TAKEN) if (overlaps(r, t)) { hit = t; break; }
+            if (hit == null) break;
+            r[1] = hit[1] + hit[3] + GAP;
+        }
+        // pushed off the bottom: stay on screen, against its bottom edge
+        if (r[1] + r[3] > screenH) r[1] = Math.max(0, screenH - r[3]);
+        TAKEN.add(r);
+        PLACED.put(e, r);
     }
 
     private static boolean overlaps(int[] a, int[] b) {

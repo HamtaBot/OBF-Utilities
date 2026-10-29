@@ -55,19 +55,21 @@ public final class ProgressBar {
     private static final long LEVEL_UP_MS = 2500;
 
     public final Type type;
-    final String name;
+    private final String name;
     public final int color;
     public final ItemStack icon;
     public final int[] gradient = new int[GRADIENT_STEPS];
     public final Anim fill = new Anim(0f);
 
-    public int level;
+    private int level;
     public boolean maxed;
     float barPercent;
     private float progress;
     private boolean percentFromBar;
     /** {@code levelText} is empty for quests, which have no level. */
     public String levelText = "", progressText = "", gain = "";
+    /** Width of the card these strings need, measured by the HUD; -1 once they change. */
+    int cardWidth = -1;
     private long levelUpAt;
     private float percentFor = -1f;
     private String percentText;
@@ -103,10 +105,12 @@ public final class ProgressBar {
         this.level = level;
         maxed = false;
         percentFromBar = needed <= 0;
-        progress = percentFromBar ? barPercent : (float) Math.max(0, Math.min(1, current / needed));
+        // without a max to divide by, target() reads the server's own bar percent instead
+        progress = percentFromBar ? 0f : (float) Math.max(0, Math.min(1, current / needed));
         levelText = level >= 0 ? String.valueOf(level) : "";
         progressText = Format.number((long) current) + " / " + Format.number((long) needed) + (unit.isEmpty() ? "" : " " + unit);
         this.gain = gain == null || gain.isBlank() ? "" : gain.startsWith("+") || gain.startsWith("-") ? gain : "+" + gain;
+        cardWidth = -1;
         if (levelUp) {
             levelUpAt = System.currentTimeMillis();
             // start the new level from an empty bar instead of sliding back across it
@@ -122,6 +126,7 @@ public final class ProgressBar {
         levelText = String.valueOf(level);
         progressText = "Niveau maximum";
         gain = "";
+        cardWidth = -1;
     }
 
     public String name() { return name; }
@@ -141,11 +146,11 @@ public final class ProgressBar {
     public boolean justLeveledUp() { return System.currentTimeMillis() - levelUpAt < LEVEL_UP_MS; }
 
     static ProgressBar preview(Type type) {
-        ProgressBar bar = switch (type) {
-            case JOB -> new ProgressBar(type, "Chasseur");
-            case SKILL -> new ProgressBar(type, "Minage");
-            case QUEST -> new ProgressBar(type, "Cassez 2500 Bûches d'acacia");
-        };
+        ProgressBar bar = new ProgressBar(type, switch (type) {
+            case JOB -> "Chasseur";
+            case SKILL -> "Minage";
+            case QUEST -> "Cassez 2500 Bûches d'acacia";
+        });
         switch (type) {
             case JOB -> bar.update(874, 872956.10, 3064244, "12.5", "XP");
             case SKILL -> bar.update(24, 1830, 4200, "8.4", "XP");

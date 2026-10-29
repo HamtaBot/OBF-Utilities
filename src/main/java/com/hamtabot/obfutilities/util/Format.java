@@ -8,10 +8,6 @@ import net.minecraft.util.Identifier;
 
 public class Format {
 
-    public static String number(int n) {
-        return String.format("%,d", n).replace(',', '.');
-    }
-
     public static String number(long n) {
         return String.format("%,d", n).replace(',', '.');
     }

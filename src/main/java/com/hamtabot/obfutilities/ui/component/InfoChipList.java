@@ -47,7 +47,7 @@ public class InfoChipList extends Component {
 
             boolean shown = !BossBars.isInfoHidden(chip);
             Draw.toggle(ctx, x + Theme.ROW_PAD, ly + (LINE - Draw.SWITCH_H) / 2, knobs.get(i).update(shown ? 1f : 0f, 16f), i == hovered);
-            InfoBarHud.drawChip(ctx, tr(), chip, x + Theme.ROW_PAD + Draw.SWITCH_W + 8, ty);
+            InfoBarHud.drawChip(ctx, tr(), chip, x + Theme.ROW_PAD + Draw.SWITCH_W + 8, ty, InfoBarHud.ALL);
             String state = shown ? "Affiché" : "Masqué";
             ctx.drawText(tr(), state, x + width - Theme.ROW_PAD - tr().getWidth(state), ty, shown ? Theme.SUCCESS : Theme.TEXT_DIM, false);
         }

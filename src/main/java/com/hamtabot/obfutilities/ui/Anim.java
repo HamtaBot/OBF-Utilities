@@ -17,4 +17,6 @@ public final class Anim {
     }
 
     public void set(float v) { value = v; }
+
+    public float value() { return value; }
 }

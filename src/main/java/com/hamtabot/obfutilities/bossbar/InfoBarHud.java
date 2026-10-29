@@ -17,12 +17,43 @@ public final class InfoBarHud {
     private static final int PAD = 6, ROW_H = 13, CHIP_GAP = 13, SHRINK_SLACK = 24;
     public static final int DEFAULT_Y = 4;
     public static final float MIN_SCALE = 0.5f, MAX_SCALE = 2f;
+    /** Passes of {@link #drawChip}: everything, only the pack icons, only the text. */
+    public static final int ALL = -1, ICONS = 1, TEXT = 2;
 
     private static List<List<BossBars.Chip>> preview;
     // values change width every tick; the card only shrinks once the gap is clear so it doesn't wobble
     private static int stickyW, stickyRows;
+    // what rawBounds measured for this frame's layout, reused by render: {width, height}
+    private static List<List<BossBars.Chip>> frameRows;
+    private static int[] frameSize;
 
-    public static final BarLayout.Element LAYOUT = InfoBarHud::rawBounds;
+    /** The card as a block of the layout and the HUD editor. */
+    public static final BarLayout.Block BLOCK = new BarLayout.Block() {
+        @Override public int[] rawBounds(boolean editing) { return InfoBarHud.rawBounds(editing); }
+        @Override public boolean isShown() { return InfoBarHud.isShown(); }
+        @Override public float scale() { return OBFUtilities.config.infoBarsScale; }
+
+        @Override
+        public void setScale(float s) {
+            OBFUtilities.config.infoBarsScale = clampScale(s);
+            BarLayout.invalidate();
+        }
+
+        @Override
+        public void setPos(int x, int y) {
+            int[] b = bounds();
+            OBFUtilities.config.infoBarsPos.set(x, y, b[2], b[3]);
+            BarLayout.invalidate();
+        }
+
+        @Override
+        public void resetPos() {
+            setScale(1f);
+            int[] b = bounds();
+            int screenW = MinecraftClient.getInstance().getWindow().getScaledWidth();
+            setPos((screenW - b[2]) / 2, DEFAULT_Y);
+        }
+    };
 
     private InfoBarHud() {}
 
@@ -56,48 +87,60 @@ public final class InfoBarHud {
         return w;
     }
 
-    private static int shownRows(List<List<BossBars.Chip>> rows) {
-        int n = 0;
-        for (List<BossBars.Chip> row : rows) if (rowWidth(row) > 0) n++;
-        return n;
-    }
-
-    private static int[] size(List<List<BossBars.Chip>> rows) {
-        int content = 0;
-        for (List<BossBars.Chip> row : rows) content = Math.max(content, rowWidth(row));
-        int shown = shownRows(rows);
+    private static int[] rawBounds(boolean editing) {
+        frameRows = null;
+        if (MinecraftClient.getInstance().player == null || !isShown()) return null;
+        List<List<BossBars.Chip>> rows = rows(editing);
+        int content = 0, shown = 0;
+        for (List<BossBars.Chip> row : rows) {
+            int w = rowWidth(row);
+            if (w == 0) continue;
+            content = Math.max(content, w);
+            shown++;
+        }
+        if (shown == 0) return null;
         int w = PAD * 2 + content;
         if (shown != stickyRows || w > stickyW || w < stickyW - SHRINK_SLACK) {
             stickyW = w;
             stickyRows = shown;
         }
-        return new int[]{ stickyW, PAD * 2 + shown * ROW_H - 3 };
+        frameRows = rows;
+        frameSize = new int[]{ stickyW, PAD * 2 + shown * ROW_H - 3 };
+
+        ModConfig cfg = OBFUtilities.config;
+        int sw = Math.round(frameSize[0] * cfg.infoBarsScale), sh = Math.round(frameSize[1] * cfg.infoBarsScale);
+        int screenW = MinecraftClient.getInstance().getWindow().getScaledWidth();
+        int[] p = cfg.infoBarsPos.resolve(sw, sh, (screenW - sw) / 2, DEFAULT_Y);
+        return new int[]{ p[0], p[1], sw, sh };
     }
 
     public static void render(DrawContext ctx, boolean editing) {
         MinecraftClient client = MinecraftClient.getInstance();
         if (client.player == null || !isShown()) return;
-        int[] b = BarLayout.bounds(LAYOUT, editing);
-        if (b == null) return;
-        List<List<BossBars.Chip>> rows = rows(editing);
-        if (shownRows(rows) == 0) return;
+        int[] b = BarLayout.bounds(BLOCK, editing);
+        if (b == null || frameRows == null) return;
+        List<List<BossBars.Chip>> rows = frameRows;
+        int[] sz = frameSize;
         TextRenderer tr = client.textRenderer;
-        int[] sz = size(rows);
         float scale = OBFUtilities.config.infoBarsScale;
 
         ctx.getMatrices().push();
         ctx.getMatrices().translate(b[0], b[1], 0);
         ctx.getMatrices().scale(scale, scale, 1f);
+        // background and separators, then the pack icons, then the text: switching render layer flushes the
+        // buffer, so drawing layer by layer costs three draws instead of a few per info
         ctx.draw(() -> {
             float opacity = OBFUtilities.config.infoBarsOpacity;
-            Draw.ringCard(ctx, 0, 0, sz[0], sz[1], Draw.withOpacity(Theme.WINDOW, opacity),
+            Draw.card(ctx, 0, 0, sz[0], sz[1], Draw.withOpacity(Theme.WINDOW, opacity),
                     editing ? Theme.ACCENT : Draw.withOpacity(Theme.WINDOW_BORDER, opacity));
-            int y = PAD;
-            for (List<BossBars.Chip> row : rows) {
-                if (rowWidth(row) == 0) continue;
-                if (y > PAD && separators()) ctx.fill(PAD, y - 3, sz[0] - PAD, y - 2, separator(Theme.DIVIDER));
-                renderRow(ctx, tr, row, y + 1, sz[0] - PAD * 2);
-                y += ROW_H;
+            for (int pass = 0; pass <= TEXT; pass++) {
+                int y = PAD;
+                for (List<BossBars.Chip> row : rows) {
+                    if (rowWidth(row) == 0) continue;
+                    if (pass == 0 && y > PAD && separators()) ctx.fill(PAD, y - 3, sz[0] - PAD, y - 2, separator(Theme.DIVIDER));
+                    renderRow(ctx, tr, row, y + 1, sz[0] - PAD * 2, pass);
+                    y += ROW_H;
+                }
             }
         });
         ctx.getMatrices().pop();
@@ -105,8 +148,11 @@ public final class InfoBarHud {
         if (editing) Draw.resizeGrip(ctx, b[0] + b[2], b[1] + b[3]);
     }
 
-    /** Spreads the row over the card width: the widest row keeps CHIP_GAP, shorter ones get wider gaps. */
-    private static void renderRow(DrawContext ctx, TextRenderer tr, List<BossBars.Chip> row, int y, int innerW) {
+    /**
+     * Spreads the row over the card width: the widest row keeps CHIP_GAP, shorter ones get wider gaps.
+     * Pass 0 draws the separators, the others the chips' icons or text.
+     */
+    private static void renderRow(DrawContext ctx, TextRenderer tr, List<BossBars.Chip> row, int y, int innerW, int pass) {
         int shown = 0, content = 0;
         for (BossBars.Chip chip : row) {
             if (BossBars.isInfoHidden(chip)) continue;
@@ -114,8 +160,9 @@ public final class InfoBarHud {
             content += chip.width();
         }
         if (shown == 1) {
+            if (pass == 0) return;
             for (BossBars.Chip chip : row) {
-                if (!BossBars.isInfoHidden(chip)) drawChip(ctx, tr, chip, PAD + (innerW - content) / 2, y);
+                if (!BossBars.isInfoHidden(chip)) drawChip(ctx, tr, chip, PAD + (innerW - content) / 2, y, pass);
             }
             return;
         }
@@ -126,81 +173,32 @@ public final class InfoBarHud {
             if (BossBars.isInfoHidden(chip)) continue;
             if (!first) {
                 int line = Math.round(x + gap / 2f);
-                if (separators()) ctx.fill(line, y - 1, line + 1, y + 8, separator(Theme.BORDER));
+                if (pass == 0 && separators()) ctx.fill(line, y - 1, line + 1, y + 8, separator(Theme.BORDER));
                 x += gap;
             }
             first = false;
-            drawChip(ctx, tr, chip, Math.round(x), y);
+            if (pass != 0) drawChip(ctx, tr, chip, Math.round(x), y, pass);
             x += chip.width();
         }
     }
 
-    /** Draws the chip's icons and text from {@code x} and returns where it ends. */
-    public static int drawChip(DrawContext ctx, TextRenderer tr, BossBars.Chip chip, int x, int y) {
+    /** Draws the chip from {@code x}: {@link #ALL} its pieces, or only its {@link #ICONS} or its {@link #TEXT}. */
+    public static void drawChip(DrawContext ctx, TextRenderer tr, BossBars.Chip chip, int x, int y, int pass) {
         for (BossBars.Piece p : chip.pieces()) {
             x += p.gapBefore();
-            if (p.dy() == 0f) {
-                ctx.drawText(tr, p.text(), x, y, 0xFFFFFFFF, false);
-            } else {
-                // half-pixel offsets are common for icons, a translate keeps them exact on high GUI scales
-                ctx.getMatrices().push();
-                ctx.getMatrices().translate(0, p.dy(), 0);
-                ctx.drawText(tr, p.text(), x, y, 0xFFFFFFFF, false);
-                ctx.getMatrices().pop();
+            if (pass == ALL || (pass == ICONS) == p.icon()) {
+                if (p.dy() == 0f) {
+                    ctx.drawText(tr, p.text(), x, y, 0xFFFFFFFF, false);
+                } else {
+                    // half-pixel offsets are common for icons, a translate keeps them exact on high GUI scales
+                    ctx.getMatrices().push();
+                    ctx.getMatrices().translate(0, p.dy(), 0);
+                    ctx.drawText(tr, p.text(), x, y, 0xFFFFFFFF, false);
+                    ctx.getMatrices().pop();
+                }
             }
             x += p.width();
         }
-        return x;
-    }
-
-    /** Where the card is drawn in the HUD editor, after the other blocks were moved out of its way. */
-    public static int[] bounds() {
-        int[] b = BarLayout.bounds(LAYOUT, true);
-        return b != null ? b : new int[]{ 0, 0, 0, 0 };
-    }
-
-    private static int[] rawBounds(boolean editing) {
-        if (MinecraftClient.getInstance().player == null || !isShown()) return null;
-        List<List<BossBars.Chip>> rows = rows(editing);
-        if (shownRows(rows) == 0) return null;
-        return bounds(size(rows));
-    }
-
-    private static int[] bounds(int[] size) {
-        ModConfig cfg = OBFUtilities.config;
-        int w = Math.round(size[0] * cfg.infoBarsScale), h = Math.round(size[1] * cfg.infoBarsScale);
-        int screenW = MinecraftClient.getInstance().getWindow().getScaledWidth();
-        int[] p = cfg.infoBarsPos.resolve(w, h, (screenW - w) / 2, DEFAULT_Y);
-        return new int[]{ p[0], p[1], w, h };
-    }
-
-    public static boolean isMouseOver(double mx, double my) {
-        if (!isShown()) return false;
-        int[] b = bounds();
-        return Draw.inside(mx, my, b[0], b[1], b[2], b[3]);
-    }
-
-    public static boolean isInResizeGrip(double mx, double my) {
-        if (!isShown()) return false;
-        int[] b = bounds();
-        return Draw.inResizeGrip(mx, my, b[0] + b[2], b[1] + b[3]);
-    }
-
-    public static void setPos(int x, int y) {
-        int[] b = bounds();
-        OBFUtilities.config.infoBarsPos.set(x, y, b[2], b[3]);
-        BarLayout.invalidate();
-    }
-
-    public static void resetPos() {
-        int[] b = bounds();
-        int screenW = MinecraftClient.getInstance().getWindow().getScaledWidth();
-        setPos((screenW - b[2]) / 2, DEFAULT_Y);
-    }
-
-    public static void setScale(float s) {
-        OBFUtilities.config.infoBarsScale = clampScale(s);
-        BarLayout.invalidate();
     }
 
     public static float clampScale(float s) { return Math.max(MIN_SCALE, Math.min(MAX_SCALE, s)); }
