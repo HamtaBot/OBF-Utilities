@@ -25,7 +25,13 @@
     "CommandSuggestionsMixin",
     "ClientBrandMixin",
     "WarpKeyMixin",
-    "KitClickMixin"
+    "KitClickMixin",
+    "BossBarHudAccessor",
+    "BossBarHudMixin",
+    "TextRendererAccessor",
+    "GlyphRendererAccessor",
+    "BitmapGlyphAccessor",
+    "ResourcePackMixin"
   ],
   "injectors": {
     "defaultRequire": 1

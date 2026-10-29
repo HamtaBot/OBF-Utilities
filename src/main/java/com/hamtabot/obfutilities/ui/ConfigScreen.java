@@ -2,6 +2,9 @@ package com.hamtabot.obfutilities.ui;
 
 import com.hamtabot.obfutilities.OBFUtilities;
 import com.hamtabot.obfutilities.blockshade.BlockShade;
+import com.hamtabot.obfutilities.bossbar.BossBars;
+import com.hamtabot.obfutilities.bossbar.InfoBarHud;
+import com.hamtabot.obfutilities.bossbar.ProgressHud;
 import com.hamtabot.obfutilities.config.ModConfig;
 import com.hamtabot.obfutilities.grade.GradeTracker;
 import com.hamtabot.obfutilities.hud.InventoryHud;
@@ -50,6 +53,7 @@ public class ConfigScreen extends Screen {
         BLOCKS   (Items.GRASS_BLOCK,     "Blocs suivis",  "Compte des blocs précis en plus des stats globales"),
         AUTOTOOL (Items.DIAMOND_PICKAXE, "AutoTool",      "Prend automatiquement le bon outil de la hotbar"),
         VISUALS  (Items.TORCH,           "Visuel",        "Luminosité et overlays d'informations"),
+        ONSCREEN (Items.EXPERIENCE_BOTTLE, "Infos à l'écran", "Les barres du haut de l'écran redessinées aux couleurs du mod"),
         INVENTORY(Items.CHEST,           "HUD Inventaire", "Ton inventaire affiché à l'écran en temps réel"),
         OPTIMIZE (Items.FEATHER,         "Optimisations", "Allège le rendu pour gagner des FPS"),
         SHADES   (Items.COAL_BLOCK,      "Blocs sombres", "Applique une texture sombre aux blocs de ton choix"),
@@ -132,6 +136,7 @@ public class ConfigScreen extends Screen {
             case BLOCKS    -> buildBlocks(c);
             case AUTOTOOL  -> buildAutoTool(c);
             case VISUALS   -> buildVisuals(c);
+            case ONSCREEN  -> buildOnScreen(c);
             case INVENTORY -> buildInventoryHud(c);
             case OPTIMIZE  -> buildOptimizations(c);
             case SHADES    -> buildShades(c);
@@ -331,6 +336,58 @@ public class ConfigScreen extends Screen {
                 () -> cfg.debugShowRam, v -> cfg.debugShowRam = v));
         c.add(new ButtonRow("Placer les overlays", "Glisse chaque overlay où tu veux sur l'écran.",
                 "Modifier", Draw.ButtonStyle.PRIMARY, this::openHudEditor));
+    }
+
+    private void buildOnScreen(List<Component> c) {
+        progressSection(c, ProgressHud.JOBS, "Barres de jobs",
+                "Remplace la barre de job du haut de l'écran par une barre de progression : niveau, XP et gain. "
+                        + "Deux jobs montés en même temps donnent deux barres.");
+        progressSection(c, ProgressHud.SKILLS, "Barres de compétences",
+                "Remplace la barre de compétence (Survie) par une barre de progression : niveau, XP et gain. "
+                        + "Chaque compétence montée en même temps a sa barre.");
+        progressSection(c, ProgressHud.QUESTS, "Barres de quêtes",
+                "Remplace la barre de progression des quêtes par une barre au thème du mod, avec le nom de la quête. "
+                        + "Chaque quête avancée en même temps a sa barre.");
+
+        c.add(new SectionTitle("Barres d'infos"));
+        c.add(new ToggleRow("Activer", "Remplace les barres d'argent, mobcoins, vote party, tokens, d'île ou de claim par une carte au thème du mod.",
+                () -> cfg.infoBarsEnabled, v -> cfg.infoBarsEnabled = v));
+        c.add(new SliderRow("Taille", "Taille de la carte d'infos à l'écran.",
+                Math.round(InfoBarHud.MIN_SCALE * 100), Math.round(InfoBarHud.MAX_SCALE * 100),
+                () -> Math.round(cfg.infoBarsScale * 100), v -> InfoBarHud.setScale(v / 100f), v -> v + " %"));
+        c.add(opacitySlider(() -> cfg.infoBarsOpacity, v -> cfg.infoBarsOpacity = v));
+        c.add(new ToggleRow("Séparateurs", "Les traits entre les infos et entre les lignes. Ils suivent aussi l'opacité du fond.",
+                () -> cfg.infoBarsSeparators, v -> cfg.infoBarsSeparators = v));
+        InfoChipList infoList = new InfoChipList();
+        if (infoList.isEmpty()) {
+            c.add(new InfoBox("Active l'option puis rouvre ce menu une fois les barres affichées en jeu pour choisir les infos à masquer.", Theme.TEXT_MUTED));
+        } else {
+            c.add(new SectionTitle("Infos affichées"));
+            c.add(infoList);
+            c.add(new InfoBox("Clique sur une ligne pour afficher ou masquer cette info dans la carte.", Theme.TEXT_MUTED));
+        }
+
+        c.add(new ButtonRow("Placer les barres", "Glisse-les où tu veux sur l'écran, coin en bas à droite ou molette pour la taille.",
+                "Modifier", Draw.ButtonStyle.PRIMARY, this::openHudEditor));
+        c.add(new ButtonRow("Copier le texte brut des barres", "Copie dans le presse-papiers le contenu exact des barres du serveur, utile pour signaler un affichage incorrect.",
+                "Copier", Draw.ButtonStyle.SECONDARY, () -> client.keyboard.setClipboard(BossBars.rawBars())));
+        c.add(new InfoBox("La barre d'origine est masquée seulement quand l'option est activée, mais elle reste lue en continu. "
+                + "Les autres barres du serveur (événements, boss...) ne changent pas.", Theme.ACCENT));
+    }
+
+    private void progressSection(List<Component> c, ProgressHud hud, String title, String description) {
+        c.add(new SectionTitle(title));
+        c.add(new ToggleRow("Activer", description, hud::isShown, hud::setEnabled));
+        c.add(new SliderRow("Taille", "Taille de ces barres à l'écran.",
+                Math.round(ProgressHud.MIN_SCALE * 100), Math.round(ProgressHud.MAX_SCALE * 100),
+                () -> Math.round(hud.scale() * 100), v -> hud.setScale(v / 100f), v -> v + " %"));
+        c.add(opacitySlider(() -> hud.opacity(), hud::setOpacity));
+    }
+
+    private SliderRow opacitySlider(java.util.function.Supplier<Float> getter, java.util.function.Consumer<Float> setter) {
+        return new SliderRow("Opacité du fond", "À 0, seuls le texte et la barre de progression restent visibles.",
+                0, 100, () -> Math.round(getter.get() * 100), v -> setter.accept(v / 100f),
+                v -> v == 0 ? "Transparent" : v == 100 ? "Opaque" : v + " %");
     }
 
     private void buildInventoryHud(List<Component> c) {

@@ -116,6 +116,25 @@ public class ModConfig {
     public HudPos  gradeHudPos       = new HudPos();
     public float   gradeHudScale     = 1.0f;
 
+    public boolean jobBarsEnabled  = false;
+    public HudPos  jobBarsPos      = new HudPos();
+    public float   jobBarsScale    = 1.0f;
+    public float   jobBarsOpacity  = 1.0f;
+    public boolean skillBarsEnabled = false;
+    public HudPos  skillBarsPos     = new HudPos();
+    public float   skillBarsScale   = 1.0f;
+    public float   skillBarsOpacity = 1.0f;
+    public boolean questBarsEnabled = false;
+    public HudPos  questBarsPos     = new HudPos();
+    public float   questBarsScale   = 1.0f;
+    public float   questBarsOpacity = 1.0f;
+    public boolean infoBarsEnabled = false;
+    public HudPos  infoBarsPos     = new HudPos();
+    public float   infoBarsScale   = 1.0f;
+    public float   infoBarsOpacity = 1.0f;
+    public boolean infoBarsSeparators = true;
+    public List<String> infoBarsHidden = new ArrayList<>();
+
     public static class CustomBlockEntry {
         public String  blockId      = "minecraft:stone";
         public boolean trackPlaced  = true;
@@ -172,6 +191,12 @@ public class ModConfig {
         kitHudHidden.removeIf(Objects::isNull);
         if (kitServer == null) kitServer = "ONEBLOCK";
         if (gradeHudPos == null) gradeHudPos = new HudPos();
+        if (jobBarsPos == null) jobBarsPos = new HudPos();
+        if (skillBarsPos == null) skillBarsPos = new HudPos();
+        if (questBarsPos == null) questBarsPos = new HudPos();
+        if (infoBarsPos == null) infoBarsPos = new HudPos();
+        if (infoBarsHidden == null) infoBarsHidden = new ArrayList<>();
+        infoBarsHidden.removeIf(Objects::isNull);
         warps.removeIf(w -> w == null || w.name == null || w.name.isBlank());
         if (adMessage == null) adMessage = "";
         if (afkDimension == null) afkDimension = "minecraft:overworld";
@@ -180,7 +205,15 @@ public class ModConfig {
         invHudScale = com.hamtabot.obfutilities.hud.InventoryHud.clampScale(invHudScale);
         kitHudScale = com.hamtabot.obfutilities.kit.KitHud.clampScale(kitHudScale);
         gradeHudScale = com.hamtabot.obfutilities.grade.GradeHud.clampScale(gradeHudScale);
+        jobBarsScale = com.hamtabot.obfutilities.bossbar.ProgressHud.clampScale(jobBarsScale);
+        skillBarsScale = com.hamtabot.obfutilities.bossbar.ProgressHud.clampScale(skillBarsScale);
+        questBarsScale = com.hamtabot.obfutilities.bossbar.ProgressHud.clampScale(questBarsScale);
+        infoBarsScale = com.hamtabot.obfutilities.bossbar.InfoBarHud.clampScale(infoBarsScale);
         invHudOpacity = Math.max(0f, Math.min(1f, invHudOpacity));
+        jobBarsOpacity = Math.max(0f, Math.min(1f, jobBarsOpacity));
+        skillBarsOpacity = Math.max(0f, Math.min(1f, skillBarsOpacity));
+        questBarsOpacity = Math.max(0f, Math.min(1f, questBarsOpacity));
+        infoBarsOpacity = Math.max(0f, Math.min(1f, infoBarsOpacity));
     }
 
     public static float clampScale(float v) {

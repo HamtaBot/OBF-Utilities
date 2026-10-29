@@ -12,6 +12,10 @@ public class Format {
         return String.format("%,d", n).replace(',', '.');
     }
 
+    public static String number(long n) {
+        return String.format("%,d", n).replace(',', '.');
+    }
+
     public static String duration(long ms) {
         long s = (ms / 1000) % 60, m = (ms / 60000) % 60, h = ms / 3600000;
         return h > 0 ? String.format("%dh%02dm%02ds", h, m, s) : String.format("%dm%02ds", m, s);
