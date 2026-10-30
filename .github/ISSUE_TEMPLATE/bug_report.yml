@@ -1,0 +1,33 @@
+name: Signaler un problème
+description: Signale un bug ou un problème rencontré avec le mod.
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: input
+    id: pseudo
+    attributes:
+      label: Pseudo
+      description: Ton pseudo en jeu.
+    validations:
+      required: true
+  - type: input
+    id: discord
+    attributes:
+      label: Pseudo Discord
+      description: Pour pouvoir te recontacter si besoin.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version du mod
+      placeholder: "4.0.6"
+    validations:
+      required: true
+  - type: textarea
+    id: probleme
+    attributes:
+      label: Problème
+      description: Décris ce qui se passe et comment le reproduire. Tu peux ajouter des captures d'écran ou des logs.
+    validations:
+      required: true

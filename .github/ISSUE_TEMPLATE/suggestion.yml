@@ -1,0 +1,26 @@
+name: Faire une suggestion
+description: Propose une idée ou une amélioration pour le mod.
+title: "[Suggestion] "
+labels: ["enhancement"]
+body:
+  - type: input
+    id: pseudo
+    attributes:
+      label: Pseudo
+      description: Ton pseudo en jeu.
+    validations:
+      required: true
+  - type: input
+    id: discord
+    attributes:
+      label: Pseudo Discord
+      description: Pour pouvoir te recontacter si besoin.
+    validations:
+      required: true
+  - type: textarea
+    id: suggestion
+    attributes:
+      label: Suggestion
+      description: Décris ton idée et ce qu'elle apporterait.
+    validations:
+      required: true
