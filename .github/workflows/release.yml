@@ -16,6 +16,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # checkout replaces an annotated tag by a plain one, which would lose its message
+      - name: Fetch the tag message
+        run: git fetch --force origin "refs/tags/$GITHUB_REF_NAME:refs/tags/$GITHUB_REF_NAME"
+
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
