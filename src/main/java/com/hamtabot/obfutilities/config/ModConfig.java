@@ -75,6 +75,8 @@ public class ModConfig {
 
     public boolean discordPresenceEnabled = true;
 
+    public boolean updateCheckEnabled = true;
+
     public float scaleHud = 1.0f;
 
     public boolean invHudEnabled = false;

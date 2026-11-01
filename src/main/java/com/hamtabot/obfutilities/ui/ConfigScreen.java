@@ -184,6 +184,10 @@ public class ConfigScreen extends Screen {
                 () -> ServerStats.canRefresh() ? "Actualiser" : Format.countdown(ServerStats.getRefreshCooldownRemaining()),
                 Draw.ButtonStyle.SECONDARY, ServerStats::canRefresh, ServerStats::refresh));
         c.add(new InfoBox("Les totaux sont récupérés automatiquement à chaque connexion au serveur.", Theme.ACCENT));
+
+        c.add(new SectionTitle("Mises à jour"));
+        c.add(new ToggleRow("Prévenir des mises à jour", "Vérifie sur GitHub à chaque lancement du jeu, et affiche un message dans le chat quand une nouvelle version est sortie.",
+                () -> cfg.updateCheckEnabled, v -> cfg.updateCheckEnabled = v));
     }
 
     private void buildAds(List<Component> c) {

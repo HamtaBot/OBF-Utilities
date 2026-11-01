@@ -131,6 +131,10 @@ Prend automatiquement le meilleur outil de ta hotbar selon le bloc visé, et ton
 - Affiche sur ton profil que tu joues sur **oneblockfrance.fr** avec OBF Utilities, avec le logo du serveur
 - Activé par défaut, se désactive dans la config
 
+## 🔔 Mises à jour
+- Message dans le chat quand une nouvelle version est sortie, avec un lien pour la télécharger
+- Vérifié une fois par lancement du jeu, se désactive dans la page HUD
+
 ---
 
 ## ⌨️ Touches par défaut

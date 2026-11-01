@@ -27,6 +27,7 @@ import com.hamtabot.obfutilities.stats.StatsReader;
 import com.hamtabot.obfutilities.storage.StorageUnit;
 import com.hamtabot.obfutilities.timer.Timers;
 import com.hamtabot.obfutilities.ui.HudEditScreen;
+import com.hamtabot.obfutilities.update.UpdateChecker;
 import com.hamtabot.obfutilities.warp.WarpMacros;
 import com.hamtabot.obfutilities.waypoint.WaypointCommand;
 import com.hamtabot.obfutilities.waypoint.WaypointManager;
@@ -100,6 +101,7 @@ public class OBFUtilities implements ClientModInitializer {
             StorageUnit.tick(client);
             KitTracker.tick(client);
             GradeTracker.tick(client);
+            UpdateChecker.tick(client);
         });
     }
 
