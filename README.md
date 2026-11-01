@@ -184,6 +184,12 @@ chmod +x gradlew
 
 Le `.jar` se trouve ensuite dans `build/libs/`.
 
+**Publier une version :** mets `mod_version` à jour dans `gradle.properties`, pousse le commit, puis pousse un tag du même numéro. GitHub compile le mod et crée la release avec le `.jar`, et le message du tag devient le texte de la release :
+```bash
+git tag -a 4.0.8 -m "Texte de la release"
+git push origin 4.0.8
+```
+
 ---
 
 ## Fichiers créés
