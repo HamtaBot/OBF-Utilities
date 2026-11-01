@@ -59,6 +59,8 @@ public final class BossBars {
     private static final Pattern LEGACY_CODE = Pattern.compile("§.");
     private static final Pattern SEPARATORS = Pattern.compile("[.,]");
     private static final int MAX_ICON_W = 16, WORD_GAP = 4;
+    // the vanilla layout: each bar has its name above it, the first bar at y 12 and its name at y 3
+    private static final int VANILLA_W = 182, VANILLA_TOP = 3, VANILLA_FIRST_BAR = 12, VANILLA_STEP = 19, VANILLA_H = 14;
 
     /** {@code dy} recentres a resource pack icon whose glyph sits higher or lower than the text line. */
     public record Piece(OrderedText text, int width, int gapBefore, float dy, boolean icon) {}
@@ -211,6 +213,23 @@ public final class BossBars {
             if (!hidden(ENTRIES.get(e.getKey()))) bars.put(e.getKey(), e.getValue());
         }
         return true;
+    }
+
+    /** How far down the bars vanilla is about to draw have to move so they don't sit under one of the mod's blocks. */
+    public static int vanillaShift(Collection<ClientBossBar> bars) {
+        if (bars.isEmpty()) return 0;
+        MinecraftClient client = MinecraftClient.getInstance();
+        int screenW = client.getWindow().getScaledWidth(), screenH = client.getWindow().getScaledHeight();
+        int w = VANILLA_W, drawn = 0, y = VANILLA_FIRST_BAR;
+        for (ClientBossBar bar : bars) {
+            w = Math.max(w, client.textRenderer.getWidth(bar.getName()));
+            drawn++;
+            y += VANILLA_STEP;
+            // vanilla stops drawing at a third of the screen
+            if (y >= screenH / 3) break;
+        }
+        int h = VANILLA_H + (drawn - 1) * VANILLA_STEP;
+        return BarLayout.shiftBelow((screenW - w) / 2, VANILLA_TOP, w, h);
     }
 
     private static boolean hidden(Entry e) {

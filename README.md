@@ -77,6 +77,7 @@ Remplace les barres du haut de l'écran par des cartes aux couleurs du mod. Chaq
 - **Barres de quêtes** : la progression de chaque quête, côte à côte quand plusieurs avancent en même temps
 - **Barres d'infos** : argent, mobcoins, vote party, tokens, île ou claim regroupés dans une carte, avec les icônes du resource pack. Chaque info peut être masquée, séparément sur chaque serveur
 - Taille, opacité du fond et position réglables pour chaque bloc. Les blocs ne se chevauchent jamais : un bloc qui grandit pousse le suivant
+- Les barres non remplacées (boss, événements...) descendent sous les blocs tant qu'elles les chevaucheraient, puis reprennent leur place
 - Petite animation de fondu quand une barre disparaît
 - Bouton **Copier le texte brut des barres** pour signaler un affichage incorrect
 

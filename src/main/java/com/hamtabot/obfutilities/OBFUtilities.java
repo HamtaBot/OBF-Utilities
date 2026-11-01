@@ -105,7 +105,7 @@ public class OBFUtilities implements ClientModInitializer {
 
     /** Every on-screen HUD, in drawing order; the HUD editor draws them itself while open. */
     public static void renderHuds(DrawContext ctx, boolean editing) {
-        BarLayout.newFrame();
+        BarLayout.newFrame(editing);
         InventoryHud.INSTANCE.render(ctx, editing);
         hud.render(ctx, editing);
         DebugOverlay.render(ctx, editing);

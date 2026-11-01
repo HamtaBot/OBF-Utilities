@@ -46,10 +46,31 @@ public final class BarLayout {
 
     public static void invalidate() { valid = false; }
 
-    /** Once per rendered frame: the bars and the layout are read again. */
-    public static void newFrame() {
+    /**
+     * Once per rendered frame: the bars and the layout are read again. It is resolved here even with every block
+     * off, so {@link #shiftBelow} never reads the blocks of an older frame.
+     */
+    public static void newFrame(boolean editing) {
         BossBars.newFrame();
-        valid = false;
+        resolve(editing);
+    }
+
+    /**
+     * How far down an area at the top of the screen has to move to clear the blocks. The vanilla boss bars are drawn
+     * before the mod's HUD, so this reads the layout of the previous frame: resolving here would run it twice.
+     */
+    public static int shiftBelow(int x, int y, int w, int h) {
+        int[] r = { x, y, w, h };
+        // same reasoning as place: every push moves the area strictly down
+        for (int pass = 0; pass <= TAKEN.size(); pass++) {
+            int[] hit = null;
+            for (int[] t : TAKEN) if (overlaps(r, t)) { hit = t; break; }
+            if (hit == null) break;
+            r[1] = hit[1] + hit[3] + GAP;
+        }
+        int screenH = MinecraftClient.getInstance().getWindow().getScaledHeight();
+        if (r[1] + h > screenH) r[1] = Math.max(y, screenH - h);
+        return r[1] - y;
     }
 
     public static void setPriority(Block b) {
