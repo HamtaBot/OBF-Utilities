@@ -22,7 +22,8 @@ import java.util.Map;
 /**
  * Job, skill and quest boss bars redrawn as progress cards. Each type is its own movable block holding one
  * card per bar the server shows, since several jobs, skills or quests can progress at once: the cards
- * sit side by side and wrap when the screen is full. The player's objectives use the same cards.
+ * sit side by side and wrap when the screen is full. The player's objectives use the same cards, stacked
+ * one above the other, with a new column only once the screen is too short to hold them.
  */
 public enum ProgressHud implements BarLayout.Block {
 
@@ -176,8 +177,14 @@ public enum ProgressHud implements BarLayout.Block {
         for (ProgressBar bar : bars) w = Math.max(w, cardWidth(tr, bar));
         int n = bars.size(), cols = 1;
         if (n > 1) {
-            int room = Math.round(MinecraftClient.getInstance().getWindow().getScaledWidth() / scale());
-            cols = Math.max(1, Math.min(n, (room + GAP) / (w + GAP)));
+            var window = MinecraftClient.getInstance().getWindow();
+            int room = Math.round(window.getScaledWidth() / scale());
+            int wanted = n;
+            if (this == OBJECTIVES) {
+                int rows = Math.max(1, (Math.round(window.getScaledHeight() / scale()) + GAP) / (H + GAP));
+                wanted = (n + rows - 1) / rows;
+            }
+            cols = Math.max(1, Math.min(wanted, (room + GAP) / (w + GAP)));
         }
         int rows = (n + cols - 1) / cols;
         return new int[]{ w, cols * w + (cols - 1) * GAP, rows * H + Math.max(0, rows - 1) * GAP, cols };
