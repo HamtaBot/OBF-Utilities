@@ -2,6 +2,7 @@ package com.hamtabot.obfutilities.bossbar;
 
 import com.hamtabot.obfutilities.OBFUtilities;
 import com.hamtabot.obfutilities.config.ModConfig;
+import com.hamtabot.obfutilities.objective.Objectives;
 import com.hamtabot.obfutilities.ui.Draw;
 import com.hamtabot.obfutilities.ui.HudElement;
 import com.hamtabot.obfutilities.ui.HudPos;
@@ -21,13 +22,14 @@ import java.util.Map;
 /**
  * Job, skill and quest boss bars redrawn as progress cards. Each type is its own movable block holding one
  * card per bar the server shows, since several jobs, skills or quests can progress at once: the cards
- * sit side by side and wrap when the screen is full.
+ * sit side by side and wrap when the screen is full. The player's objectives use the same cards.
  */
 public enum ProgressHud implements BarLayout.Block {
 
     JOBS(ProgressBar.Type.JOB, 46),
     SKILLS(ProgressBar.Type.SKILL, 92),
-    QUESTS(ProgressBar.Type.QUEST, 138);
+    QUESTS(ProgressBar.Type.QUEST, 138),
+    OBJECTIVES(ProgressBar.Type.OBJECTIVE, 184);
 
     private static final int PAD = 6, ICON = 10, TEXT_X = PAD + ICON + 4;
     private static final int H = 38, GAP = 3, MIN_W = 190, TRACK_Y = 17, TRACK_H = 7, INFO_Y = 28;
@@ -50,44 +52,56 @@ public enum ProgressHud implements BarLayout.Block {
         this.defaultY = defaultY;
     }
 
+    public boolean isEnabled() {
+        ModConfig cfg = OBFUtilities.config;
+        return switch (this) { case JOBS -> cfg.jobBarsEnabled; case SKILLS -> cfg.skillBarsEnabled; case QUESTS -> cfg.questBarsEnabled; case OBJECTIVES -> cfg.objectiveBarsEnabled; };
+    }
+
+    /**
+     * Objectives are on by default: without any to show, their block stays out of the HUD editor. It stays
+     * shown while {@code shown} still holds cards, so the last one fades out like the others.
+     */
     @Override
     public boolean isShown() {
-        ModConfig cfg = OBFUtilities.config;
-        return switch (this) { case JOBS -> cfg.jobBarsEnabled; case SKILLS -> cfg.skillBarsEnabled; case QUESTS -> cfg.questBarsEnabled; };
+        return isEnabled() && (this != OBJECTIVES || !shown.isEmpty() || !Objectives.bars().isEmpty());
     }
 
     public void setEnabled(boolean v) {
         ModConfig cfg = OBFUtilities.config;
-        switch (this) { case JOBS -> cfg.jobBarsEnabled = v; case SKILLS -> cfg.skillBarsEnabled = v; case QUESTS -> cfg.questBarsEnabled = v; }
+        switch (this) { case JOBS -> cfg.jobBarsEnabled = v; case SKILLS -> cfg.skillBarsEnabled = v; case QUESTS -> cfg.questBarsEnabled = v; case OBJECTIVES -> cfg.objectiveBarsEnabled = v; }
     }
 
     @Override
     public float scale() {
         ModConfig cfg = OBFUtilities.config;
-        return switch (this) { case JOBS -> cfg.jobBarsScale; case SKILLS -> cfg.skillBarsScale; case QUESTS -> cfg.questBarsScale; };
+        return switch (this) { case JOBS -> cfg.jobBarsScale; case SKILLS -> cfg.skillBarsScale; case QUESTS -> cfg.questBarsScale; case OBJECTIVES -> cfg.objectiveBarsScale; };
     }
 
     @Override
     public void setScale(float s) {
         ModConfig cfg = OBFUtilities.config;
         s = HudElement.clampScale(s);
-        switch (this) { case JOBS -> cfg.jobBarsScale = s; case SKILLS -> cfg.skillBarsScale = s; case QUESTS -> cfg.questBarsScale = s; }
+        switch (this) { case JOBS -> cfg.jobBarsScale = s; case SKILLS -> cfg.skillBarsScale = s; case QUESTS -> cfg.questBarsScale = s; case OBJECTIVES -> cfg.objectiveBarsScale = s; }
         BarLayout.invalidate();
     }
 
     public float opacity() {
         ModConfig cfg = OBFUtilities.config;
-        return switch (this) { case JOBS -> cfg.jobBarsOpacity; case SKILLS -> cfg.skillBarsOpacity; case QUESTS -> cfg.questBarsOpacity; };
+        return switch (this) { case JOBS -> cfg.jobBarsOpacity; case SKILLS -> cfg.skillBarsOpacity; case QUESTS -> cfg.questBarsOpacity; case OBJECTIVES -> cfg.objectiveBarsOpacity; };
     }
 
     public void setOpacity(float o) {
         ModConfig cfg = OBFUtilities.config;
-        switch (this) { case JOBS -> cfg.jobBarsOpacity = o; case SKILLS -> cfg.skillBarsOpacity = o; case QUESTS -> cfg.questBarsOpacity = o; }
+        switch (this) { case JOBS -> cfg.jobBarsOpacity = o; case SKILLS -> cfg.skillBarsOpacity = o; case QUESTS -> cfg.questBarsOpacity = o; case OBJECTIVES -> cfg.objectiveBarsOpacity = o; }
     }
 
     private HudPos pos() {
         ModConfig cfg = OBFUtilities.config;
-        return switch (this) { case JOBS -> cfg.jobBarsPos; case SKILLS -> cfg.skillBarsPos; case QUESTS -> cfg.questBarsPos; };
+        return switch (this) { case JOBS -> cfg.jobBarsPos; case SKILLS -> cfg.skillBarsPos; case QUESTS -> cfg.questBarsPos; case OBJECTIVES -> cfg.objectiveBarsPos; };
+    }
+
+    private List<ProgressBar> liveBars() {
+        return this == OBJECTIVES ? Objectives.bars() : BossBars.bars(type);
     }
 
     public static void renderAll(DrawContext ctx, boolean editing) {
@@ -96,7 +110,7 @@ public enum ProgressHud implements BarLayout.Block {
 
     /** In the editor: the live bars, or a sample card so the block can be placed before any bar shows up. */
     private List<ProgressBar> liveOrPreview() {
-        List<ProgressBar> live = BossBars.bars(type);
+        List<ProgressBar> live = liveBars();
         if (!live.isEmpty()) return live;
         if (preview == null) preview = List.of(ProgressBar.preview(type));
         return preview;
@@ -104,7 +118,7 @@ public enum ProgressHud implements BarLayout.Block {
 
     /** Keeps a removed bar in its slot while it fades out, so the cards below only move up once it is gone. */
     private List<ProgressBar> shownBars() {
-        List<ProgressBar> live = BossBars.bars(type);
+        List<ProgressBar> live = liveBars();
         long now = System.currentTimeMillis();
         for (ProgressBar bar : shown) {
             if (!live.contains(bar)) leaving.putIfAbsent(bar, now);
@@ -266,7 +280,7 @@ public enum ProgressHud implements BarLayout.Block {
 
     /** {@code opacity} only fades the card background: the text and the progress bar stay readable. */
     private static void drawBackground(DrawContext ctx, ProgressBar bar, int w, boolean editing, float opacity) {
-        int border = bar.justLeveledUp() ? Theme.SUCCESS : editing ? Theme.ACCENT : Draw.withOpacity(Theme.WINDOW_BORDER, opacity);
+        int border = bar.justLeveledUp() || bar.done ? Theme.SUCCESS : editing ? Theme.ACCENT : Draw.withOpacity(Theme.WINDOW_BORDER, opacity);
         Draw.card(ctx, 0, 0, w, H, Draw.withOpacity(Theme.WINDOW, opacity), border);
 
         int tx = PAD, tw = w - PAD * 2;
@@ -304,7 +318,7 @@ public enum ProgressHud implements BarLayout.Block {
 
         ctx.drawText(tr, bar.progressText, PAD, INFO_Y, Theme.TEXT_MUTED, false);
         String pct = bar.percentText();
-        ctx.drawText(tr, pct, w - PAD - tr.getWidth(pct), INFO_Y, bar.maxed ? Theme.SUCCESS : bar.color, false);
+        ctx.drawText(tr, pct, w - PAD - tr.getWidth(pct), INFO_Y, bar.maxed || bar.done ? Theme.SUCCESS : bar.color, false);
     }
 
     @Override

@@ -12,6 +12,9 @@ import com.hamtabot.obfutilities.hud.InventoryHud;
 import com.hamtabot.obfutilities.input.KeyRemap;
 import com.hamtabot.obfutilities.input.Keybinds;
 import com.hamtabot.obfutilities.kit.KitTracker;
+import com.hamtabot.obfutilities.objective.ObjectiveEditScreen;
+import com.hamtabot.obfutilities.objective.ObjectiveEntry;
+import com.hamtabot.obfutilities.objective.Objectives;
 import com.hamtabot.obfutilities.stats.AdTimer;
 import com.hamtabot.obfutilities.stats.AfkTimer;
 import com.hamtabot.obfutilities.stats.ServerStats;
@@ -51,6 +54,7 @@ public class ConfigScreen extends Screen {
         ADS      (Items.PAPER,           "Publicité",     "Enregistre ta pub et envoie-la en un clic"),
         AFK      (Items.RED_BED,         "AFK Timer",     "Temps passé dans ta zone AFK"),
         TIMERS   (Items.CLOCK,           "Timers",        "Chronos et comptes à rebours, affichables à l'écran"),
+        OBJECTIVES(Items.TARGET,         "Objectifs",     "Fixe-toi des objectifs de blocs et de mobs, avec leur barre à l'écran"),
         KITS     (Items.ENDER_CHEST,     "Kits",          "Prévient quand un kit du /kit est disponible"),
         GRADES   (Items.NAME_TAG,        "Grades",        "Temps restant de tes grades du /grade"),
         BLOCKS   (Items.GRASS_BLOCK,     "Blocs suivis",  "Compte des blocs précis en plus des stats globales"),
@@ -135,6 +139,7 @@ public class ConfigScreen extends Screen {
             case ADS       -> buildAds(c);
             case AFK       -> buildAfk(c);
             case TIMERS    -> buildTimers(c);
+            case OBJECTIVES -> buildObjectives(c);
             case KITS      -> buildKits(c);
             case GRADES    -> buildGrades(c);
             case BLOCKS    -> buildBlocks(c);
@@ -246,6 +251,28 @@ public class ConfigScreen extends Screen {
             c.add(new SectionTitle("Légende"));
             c.add(new TimerLegend());
         }
+    }
+
+    private void buildObjectives(List<Component> c) {
+        List<ObjectiveEntry> objectives = Objectives.all();
+        c.add(new ButtonRow("Nouvel objectif", "Blocs à casser, blocs à poser ou mobs à tuer. " + Objectives.MAX + " objectifs au maximum.",
+                () -> "+ Créer", Draw.ButtonStyle.PRIMARY, () -> objectives.size() < Objectives.MAX,
+                () -> client.setScreen(new ObjectiveEditScreen(this, null))));
+        c.add(new ButtonRow("Placer les objectifs", "Glisse-les où tu veux sur l'écran, coin en bas à droite ou molette pour la taille.",
+                "Modifier", Draw.ButtonStyle.SECONDARY, this::openHudEditor));
+
+        c.add(new SectionTitle("Mes objectifs (" + objectives.size() + ")"));
+        if (objectives.isEmpty()) {
+            c.add(new InfoBox("Aucun objectif pour l'instant. Exemple : casser 10 000 blocs de pierre, avec une barre qui se vide au fil du minage.", Theme.TEXT_MUTED));
+        }
+        for (ObjectiveEntry o : objectives) {
+            c.add(new ObjectiveRow(o, () -> client.setScreen(new ObjectiveEditScreen(this, o)),
+                    () -> { Objectives.remove(o); refresh(); }));
+        }
+
+        progressSection(c, ProgressHud.OBJECTIVES, "Barres d'objectifs",
+                "Affiche à l'écran les objectifs dont l'interrupteur est activé, sur les mêmes cartes que les quêtes.");
+        c.add(new InfoBox("Les objectifs avancent comme les stats du HUD, même quand leur barre est cachée, et restent sauvegardés d'une session à l'autre.", Theme.ACCENT));
     }
 
     private void buildKits(List<Component> c) {
@@ -382,7 +409,7 @@ public class ConfigScreen extends Screen {
 
     private void progressSection(List<Component> c, ProgressHud hud, String title, String description) {
         c.add(new SectionTitle(title));
-        c.add(new ToggleRow("Activer", description, hud::isShown, hud::setEnabled));
+        c.add(new ToggleRow("Activer", description, hud::isEnabled, hud::setEnabled));
         c.add(new SliderRow("Taille", "Taille de ces barres à l'écran.",
                 Math.round(ProgressHud.MIN_SCALE * 100), Math.round(ProgressHud.MAX_SCALE * 100),
                 () -> Math.round(hud.scale() * 100), v -> hud.setScale(v / 100f), v -> v + " %"));

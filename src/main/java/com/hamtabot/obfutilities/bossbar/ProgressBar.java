@@ -12,10 +12,13 @@ import java.text.Normalizer;
 import java.util.List;
 import java.util.Locale;
 
-/** One job, skill or quest boss bar, with every display string prepared when the server updates it. */
+/**
+ * One progress card, with every display string prepared when it changes: a job, skill or quest boss bar, or a
+ * goal set by the player.
+ */
 public final class ProgressBar {
 
-    public enum Type { JOB, SKILL, QUEST }
+    public enum Type { JOB, SKILL, QUEST, OBJECTIVE }
 
     private record Look(String[] keys, int color, Item icon) {
         Look(int color, Item icon, String... keys) { this(keys, color, icon); }
@@ -63,6 +66,8 @@ public final class ProgressBar {
 
     private int level;
     public boolean maxed;
+    /** A goal that was reached. */
+    boolean done;
     float barPercent;
     private float progress;
     private boolean percentFromBar;
@@ -75,17 +80,33 @@ public final class ProgressBar {
     private String percentText;
 
     ProgressBar(Type type, String name) {
+        this(type, name, look(type, name));
+    }
+
+    private ProgressBar(Type type, String name, Look look) {
+        this(type, name, look.color(), new ItemStack(look.icon()));
+    }
+
+    private ProgressBar(Type type, String name, int color, ItemStack icon) {
         this.type = type;
         this.name = name;
-        Look look = switch (type) {
+        this.color = color;
+        this.icon = icon;
+        int dark = Draw.lerpColor(color, 0xFF000000, 0.45f);
+        for (int i = 0; i < GRADIENT_STEPS; i++) gradient[i] = Draw.lerpColor(dark, color, i / (float) (GRADIENT_STEPS - 1));
+    }
+
+    public static ProgressBar objective(String name, int color, ItemStack icon) {
+        return new ProgressBar(Type.OBJECTIVE, name, color, icon);
+    }
+
+    private static Look look(Type type, String name) {
+        return switch (type) {
             case JOB -> look(JOB_LOOKS, name);
             case SKILL -> look(SKILL_LOOKS, name);
             case QUEST -> QUEST_LOOK;
+            case OBJECTIVE -> DEFAULT_LOOK;
         };
-        color = look.color();
-        icon = new ItemStack(look.icon());
-        int dark = Draw.lerpColor(color, 0xFF000000, 0.45f);
-        for (int i = 0; i < GRADIENT_STEPS; i++) gradient[i] = Draw.lerpColor(dark, color, i / (float) (GRADIENT_STEPS - 1));
     }
 
     private static Look look(List<Look> looks, String name) {
@@ -116,6 +137,13 @@ public final class ProgressBar {
             // start the new level from an empty bar instead of sliding back across it
             fill.set(0f);
         }
+    }
+
+    /** {@code current} is what the bar shows: what was done, or what is left when it counts down. */
+    public void updateObjective(long current, long target, String unit, boolean done) {
+        update(-1, current, target, "", unit);
+        this.done = done;
+        if (done) progressText = "Objectif atteint";
     }
 
     void updateMaxed(int level) {
@@ -150,11 +178,13 @@ public final class ProgressBar {
             case JOB -> "Chasseur";
             case SKILL -> "Minage";
             case QUEST -> "Cassez 2500 Bûches d'acacia";
+            case OBJECTIVE -> "Casser 2500 blocs";
         });
         switch (type) {
             case JOB -> bar.update(874, 872956.10, 3064244, "12.5", "XP");
             case SKILL -> bar.update(24, 1830, 4200, "8.4", "XP");
             case QUEST -> bar.update(-1, 1240, 2500, "", "Bûches d'acacia");
+            case OBJECTIVE -> bar.updateObjective(1240, 2500, "blocs", false);
         }
         bar.fill.set(bar.target());
         return bar;

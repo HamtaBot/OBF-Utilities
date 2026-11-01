@@ -17,6 +17,7 @@ import com.hamtabot.obfutilities.input.KeyRemap;
 import com.hamtabot.obfutilities.kit.KitHud;
 import com.hamtabot.obfutilities.kit.KitTracker;
 import com.hamtabot.obfutilities.input.Keybinds;
+import com.hamtabot.obfutilities.objective.Objectives;
 import com.hamtabot.obfutilities.stats.AdTimer;
 import com.hamtabot.obfutilities.stats.AfkTimer;
 import com.hamtabot.obfutilities.stats.ServerStats;
@@ -76,7 +77,7 @@ public class OBFUtilities implements ClientModInitializer {
             @Override public Identifier getFabricId() { return new Identifier(MOD_ID, "boss_bars"); }
             @Override public void reload(ResourceManager manager) { BossBars.reset(); }
         });
-        ClientLifecycleEvents.CLIENT_STOPPING.register(c -> { SessionStore.save(); AfkTimer.save(); });
+        ClientLifecycleEvents.CLIENT_STOPPING.register(c -> { SessionStore.save(); AfkTimer.save(); Objectives.save(); });
 
         HudRenderCallback.EVENT.register((ctx, delta) -> {
             if (!(MinecraftClient.getInstance().currentScreen instanceof HudEditScreen)) renderHuds(ctx, false);
@@ -91,6 +92,7 @@ public class OBFUtilities implements ClientModInitializer {
             AdTimer.tick();
             AfkTimer.tick(client);
             Timers.tick(client);
+            Objectives.tick();
             StatsReader.tick(client);
             ServerStats.tick(client);
             Keybinds.tick(client);

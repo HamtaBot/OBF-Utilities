@@ -222,6 +222,7 @@ public final class BossBars {
             case JOB -> cfg.jobBarsEnabled;
             case SKILL -> cfg.skillBarsEnabled;
             case QUEST -> cfg.questBarsEnabled;
+            case OBJECTIVE -> false; // never comes from the server
         };
     }
 

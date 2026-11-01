@@ -9,7 +9,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Places the boss bar blocks (infos, jobs, skills, quests) so they never overlap: they are laid out in a fixed
+ * Places the bar blocks (infos, jobs, skills, quests, objectives) so they never overlap: they are laid out in a fixed
  * order and a block touching one already placed is pushed just below it. Blocks grow while bars stack up, so
  * this runs on every frame, once, and the result is shared by rendering and the HUD editor's hit tests.
  */
@@ -32,7 +32,7 @@ public final class BarLayout {
 
     private static final int GAP = 4;
 
-    private static final List<Block> BLOCKS = List.of(InfoBarHud.BLOCK, ProgressHud.JOBS, ProgressHud.SKILLS, ProgressHud.QUESTS);
+    private static final List<Block> BLOCKS = List.of(InfoBarHud.BLOCK, ProgressHud.JOBS, ProgressHud.SKILLS, ProgressHud.QUESTS, ProgressHud.OBJECTIVES);
     private static final Map<Element, int[]> PLACED = new IdentityHashMap<>();
     private static final List<int[]> TAKEN = new ArrayList<>();
     private static boolean valid, validEditing;

@@ -2,6 +2,7 @@ package com.hamtabot.obfutilities.config;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.hamtabot.obfutilities.objective.ObjectiveEntry;
 import com.hamtabot.obfutilities.timer.TimerEntry;
 import com.hamtabot.obfutilities.ui.HudElement;
 import com.hamtabot.obfutilities.ui.HudPos;
@@ -105,6 +106,12 @@ public class ModConfig {
 
     public List<TimerEntry> timers = new ArrayList<>();
 
+    public List<ObjectiveEntry> objectives = new ArrayList<>();
+    public boolean objectiveBarsEnabled = true;
+    public HudPos  objectiveBarsPos     = new HudPos();
+    public float   objectiveBarsScale   = 1.0f;
+    public float   objectiveBarsOpacity = 1.0f;
+
     public boolean kitsEnabled     = false;
     public boolean kitTitleEnabled = true;
     public boolean kitHudEnabled   = false;
@@ -185,6 +192,15 @@ public class ModConfig {
         blockShades.removeIf(e -> e == null || e.blockId == null);
         timers.removeIf(Objects::isNull);
         for (TimerEntry t : timers) if (t.pos == null) t.pos = new HudPos();
+        if (objectives == null) objectives = new ArrayList<>();
+        objectives.removeIf(Objects::isNull);
+        for (ObjectiveEntry o : objectives) {
+            if (o.name == null) o.name = "";
+            if (o.blockId == null) o.blockId = "";
+            o.target = Math.max(1, o.target);
+            o.progress = Math.max(0, Math.min(o.target, o.progress));
+        }
+        if (objectiveBarsPos == null) objectiveBarsPos = new HudPos();
         if (invHudPos == null) invHudPos = new HudPos();
         if (debugFpsPos == null) debugFpsPos = new HudPos();
         if (debugCoordsPos == null) debugCoordsPos = new HudPos();
@@ -211,11 +227,13 @@ public class ModConfig {
         jobBarsScale = HudElement.clampScale(jobBarsScale);
         skillBarsScale = HudElement.clampScale(skillBarsScale);
         questBarsScale = HudElement.clampScale(questBarsScale);
+        objectiveBarsScale = HudElement.clampScale(objectiveBarsScale);
         infoBarsScale = HudElement.clampScale(infoBarsScale);
         invHudOpacity = clamp01(invHudOpacity);
         jobBarsOpacity = clamp01(jobBarsOpacity);
         skillBarsOpacity = clamp01(skillBarsOpacity);
         questBarsOpacity = clamp01(questBarsOpacity);
+        objectiveBarsOpacity = clamp01(objectiveBarsOpacity);
         infoBarsOpacity = clamp01(infoBarsOpacity);
     }
 

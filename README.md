@@ -47,6 +47,13 @@ Ton inventaire affiché à l'écran en temps réel, sans avoir à l'ouvrir :
 - Basés sur l'heure réelle : un compte à rebours continue même jeu fermé (pratique pour les votes)
 - Affichables à l'écran, déplaçables et redimensionnables
 
+## 🎯 Objectifs
+- Jusqu'à 10 objectifs : blocs à casser, blocs à poser ou mobs à tuer, avec un bloc précis ou tous les blocs
+- Comptés comme les stats du HUD (stacks de mobs compris) et **sauvegardés** d'une session à l'autre
+- Mêmes cartes que les quêtes : barre, chiffres et pourcentage, déplaçables et redimensionnables
+- Chaque barre au choix en **compteur** (x % atteints) ou en **décompte** (il reste x %)
+- Title et son quand un objectif est atteint : sa carte disparaît de l'écran et il reste dans la liste, prêt à être relancé
+
 ## 🎁 Kits
 - Prévient quand un kit du `/kit` est disponible, avec un **message à l'écran** (désactivable)
 - Les cooldowns sont **sauvegardés en heure réelle** : ils restent justes après avoir fermé et relancé le jeu
@@ -178,7 +185,7 @@ Le `.jar` se trouve ensuite dans `build/libs/`.
 
 | Fichier | Contenu |
 |---|---|
-| `config/obfutilities.json` | Configuration du mod (options, blocs suivis, timers, zone AFK, touches des warps...) |
+| `config/obfutilities.json` | Configuration du mod (options, blocs suivis, timers, objectifs, zone AFK, touches des warps...) |
 | `config/obfutilities_waypoints.json` | Waypoints |
 | `config/obfutilities_session.json` | Session sauvegardée (si « Garder la session » est activé) |
 | `config/obfutilities_afk.json` | Temps AFK sauvegardé (si l'option est activée) |

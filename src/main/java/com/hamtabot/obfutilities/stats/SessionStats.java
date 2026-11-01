@@ -2,6 +2,7 @@ package com.hamtabot.obfutilities.stats;
 
 import com.hamtabot.obfutilities.OBFUtilities;
 import com.hamtabot.obfutilities.config.ModConfig;
+import com.hamtabot.obfutilities.objective.Objectives;
 
 import java.util.IdentityHashMap;
 import java.util.List;
@@ -25,6 +26,7 @@ public class SessionStats {
     public static void onBlockPlaced(String blockId, String itemId) {
         PLACED.add(1);
         activitySinceLastCheck = true;
+        Objectives.onBlockPlaced(blockId, itemId);
         for (ModConfig.CustomBlockEntry e : OBFUtilities.config.customBlocks) {
             if (e.enabled && e.trackPlaced && (itemId.equals(e.blockId) || blockId.equals(e.blockId))) custom(e).add(1);
         }
@@ -33,6 +35,7 @@ public class SessionStats {
     public static void onBlockMined(String blockId) {
         MINED.add(1);
         activitySinceLastCheck = true;
+        Objectives.onBlockMined(blockId);
         for (ModConfig.CustomBlockEntry e : OBFUtilities.config.customBlocks) {
             if (e.enabled && !e.trackPlaced && blockId.equals(e.blockId)) custom(e).add(1);
         }
@@ -41,6 +44,7 @@ public class SessionStats {
     public static void onMobKilled(int count) {
         KILLS.add(count);
         activitySinceLastCheck = true;
+        Objectives.onMobKilled(count);
     }
 
     public static StatCounter custom(ModConfig.CustomBlockEntry entry) {
