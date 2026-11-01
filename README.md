@@ -119,6 +119,10 @@ Prend automatiquement le meilleur outil de ta hotbar selon le bloc visé, et ton
 - **Double appui pour jeter** : évite de drop un objet par erreur
 - **Remplacer le clic gauche ou droit** par une touche du clavier, directement depuis le mod (plus besoin de changer la touche dans les paramètres)
 
+## 💬 Discord
+- Affiche sur ton profil que tu joues sur **oneblockfrance.fr** avec OBF Utilities, avec le logo du serveur
+- Activé par défaut, se désactive dans la config
+
 ---
 
 ## ⌨️ Touches par défaut

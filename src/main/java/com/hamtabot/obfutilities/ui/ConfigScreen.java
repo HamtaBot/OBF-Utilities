@@ -6,6 +6,7 @@ import com.hamtabot.obfutilities.bossbar.BossBars;
 import com.hamtabot.obfutilities.bossbar.InfoBarHud;
 import com.hamtabot.obfutilities.bossbar.ProgressHud;
 import com.hamtabot.obfutilities.config.ModConfig;
+import com.hamtabot.obfutilities.discord.DiscordPresence;
 import com.hamtabot.obfutilities.grade.GradeTracker;
 import com.hamtabot.obfutilities.hud.InventoryHud;
 import com.hamtabot.obfutilities.input.KeyRemap;
@@ -62,7 +63,8 @@ public class ConfigScreen extends Screen {
         CONTROLS (Items.LEVER,           "Contrôles",     "Drop sécurisé et touches de remplacement"),
         WAYPOINTS(Items.MAP,             "Waypoints",     "Points de repère affichés dans le monde"),
         WARPS    (Items.ENDER_PEARL,     "Macro Warps",   "Une touche du clavier pour chaque /warp du serveur"),
-        STORAGE  (Items.HOPPER,          "Unité stockage", "Déposer et prendre en un clic dans les unités de stockage");
+        STORAGE  (Items.HOPPER,          "Unité stockage", "Déposer et prendre en un clic dans les unités de stockage"),
+        DISCORD  (Items.BELL,            "Discord",       "Affiche OneBlock France sur ton profil Discord");
 
         final ItemStack icon;
         final String title, subtitle;
@@ -146,6 +148,7 @@ public class ConfigScreen extends Screen {
             case WAYPOINTS -> buildWaypoints(c);
             case WARPS     -> buildWarps(c);
             case STORAGE   -> buildStorage(c);
+            case DISCORD   -> buildDiscord(c);
         }
         return c;
     }
@@ -506,6 +509,12 @@ public class ConfigScreen extends Screen {
         c.add(new ToggleRow("Bouton « Tout prendre »", "Prend des stacks dans l'unité jusqu'à ce que ton inventaire soit plein.",
                 () -> cfg.storageWithdrawEnabled, v -> cfg.storageWithdrawEnabled = v));
         c.add(new InfoBox("Les boutons apparaissent à côté de l'unité quand tu l'ouvres. Clique sur « Arrêter » pour interrompre.", Theme.ACCENT));
+    }
+
+    private void buildDiscord(List<Component> c) {
+        c.add(new ToggleRow("Statut Discord", "Affiche sur ton profil que tu joues sur oneblockfrance.fr avec OBF Utilities, tant que le jeu est ouvert.",
+                () -> cfg.discordPresenceEnabled, v -> { cfg.discordPresenceEnabled = v; DiscordPresence.wake(); }));
+        c.add(new InfoBox("Il faut que l'application Discord soit ouverte sur ton PC, et que le partage d'activité soit activé dans ses paramètres.", Theme.ACCENT));
     }
 
     @Override

@@ -7,6 +7,7 @@ import com.hamtabot.obfutilities.bossbar.InfoBarHud;
 import com.hamtabot.obfutilities.bossbar.ProgressHud;
 import com.hamtabot.obfutilities.config.ModConfig;
 import com.hamtabot.obfutilities.debug.DebugOverlay;
+import com.hamtabot.obfutilities.discord.DiscordPresence;
 import com.hamtabot.obfutilities.fullbright.FullBright;
 import com.hamtabot.obfutilities.grade.GradeHud;
 import com.hamtabot.obfutilities.grade.GradeTracker;
@@ -66,6 +67,7 @@ public class OBFUtilities implements ClientModInitializer {
         WaypointManager.load();
         WaypointCommand.register();
         WaypointRenderer.register();
+        DiscordPresence.start();
 
         ClientLifecycleEvents.CLIENT_STARTED.register(KeyRemap::applySaved);
         ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> BossBars.disconnected());

@@ -72,6 +72,8 @@ public class ModConfig {
 
     public boolean waypointsEnabled = true;
 
+    public boolean discordPresenceEnabled = true;
+
     public float scaleHud = 1.0f;
 
     public boolean invHudEnabled = false;
