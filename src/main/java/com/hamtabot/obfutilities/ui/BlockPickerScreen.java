@@ -26,6 +26,7 @@ public class BlockPickerScreen extends Screen {
 
     private final Screen parent;
     private final Consumer<List<String>> onConfirm;
+    private final Consumer<String> onPick;
     private final Set<String> alreadyAdded;
     private final Predicate<String> filter;
     private final Set<String> selected = new LinkedHashSet<>();
@@ -40,15 +41,29 @@ public class BlockPickerScreen extends Screen {
 
     public BlockPickerScreen(Screen parent, String title, Set<String> alreadyAdded, Predicate<String> filter,
                              Consumer<List<String>> onConfirm) {
+        this(parent, title, alreadyAdded, filter, onConfirm, null);
+    }
+
+    /** Picks a single block and hands it back. */
+    public BlockPickerScreen(Screen parent, String title, Consumer<String> onPick) {
+        this(parent, title, Set.of(), id -> true, null, onPick);
+    }
+
+    private BlockPickerScreen(Screen parent, String title, Set<String> alreadyAdded, Predicate<String> filter,
+                              Consumer<List<String>> onConfirm, Consumer<String> onPick) {
         super(Text.literal(title));
         this.parent = parent;
         this.alreadyAdded = alreadyAdded;
         this.filter = filter;
         this.onConfirm = onConfirm;
-        if (onConfirm != null) trackPlaced = false;
+        this.onPick = onPick;
+        if (onConfirm != null || onPick != null) trackPlaced = false;
     }
 
     private boolean multi() { return onConfirm != null; }
+
+    /** Only the custom blocks list asks whether the block is counted when placed or mined. */
+    private boolean showsSource() { return !multi() && onPick == null; }
 
     @Override
     protected void init() {
@@ -76,7 +91,7 @@ public class BlockPickerScreen extends Screen {
 
     private int segY() { return winY + HEADER_H + 8; }
 
-    private int fieldY() { return multi() ? winY + HEADER_H + 8 : segY() + SEG_H + 8; }
+    private int fieldY() { return showsSource() ? segY() + SEG_H + 8 : winY + HEADER_H + 8; }
 
     private int footerY() { return winY + winH - 8 - FOOTER_H; }
 
@@ -106,6 +121,11 @@ public class BlockPickerScreen extends Screen {
             Draw.playClick();
             return;
         }
+        if (onPick != null) {
+            onPick.accept(id);
+            close();
+            return;
+        }
         OBFUtilities.config.customBlocks.add(new ModConfig.CustomBlockEntry(id, trackPlaced));
         OBFUtilities.config.save();
         close();
@@ -124,7 +144,7 @@ public class BlockPickerScreen extends Screen {
         int[] c = closeBounds();
         Draw.closeButton(ctx, c[0], c[1], Theme.CLOSE_SIZE, Draw.inside(mouseX, mouseY, c[0], c[1], Theme.CLOSE_SIZE, Theme.CLOSE_SIZE));
 
-        if (!multi()) Draw.segments(ctx, textRenderer, winX + 10, segY(), winW - 20, SEG_H, SOURCE_LABELS, trackPlaced ? 0 : 1, mouseX, mouseY);
+        if (showsSource()) Draw.segments(ctx, textRenderer, winX + 10, segY(), winW - 20, SEG_H, SOURCE_LABELS, trackPlaced ? 0 : 1, mouseX, mouseY);
 
         int fx = winX + 10, fy = fieldY();
         Draw.inputFrame(ctx, fx, fy, winW - 20, 18, search.isFocused());
@@ -182,7 +202,7 @@ public class BlockPickerScreen extends Screen {
                     if (!selected.isEmpty()) { selected.clear(); Draw.playClick(); }
                     return true;
                 }
-            } else {
+            } else if (showsSource()) {
                 int seg = Draw.segmentAt(mouseX, mouseY, winX + 10, segY(), winW - 20, SEG_H, SOURCE_LABELS.length);
                 if (seg >= 0) {
                     if ((seg == 0) != trackPlaced) { trackPlaced = seg == 0; reloadIds(); }
