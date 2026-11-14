@@ -11,19 +11,22 @@ public class ObjectiveEntry {
 
     /** Colours follow the matching sections of the stats HUD. */
     public enum Action {
-        MINE("Casser", "blocs", Theme.SUCCESS, Items.IRON_PICKAXE),
-        PLACE("Poser", "blocs", Theme.ACCENT, Items.BRICKS),
-        KILL("Tuer", "mobs", Theme.DANGER, Items.IRON_SWORD);
+        MINE("Casser", "blocs", Items.IRON_PICKAXE),
+        PLACE("Poser", "blocs", Items.BRICKS),
+        KILL("Tuer", "mobs", Items.IRON_SWORD);
 
         public final String label, unit;
-        public final int color;
         final Item icon;
 
-        Action(String label, String unit, int color, Item icon) {
+        Action(String label, String unit, Item icon) {
             this.label = label;
             this.unit = unit;
-            this.color = color;
             this.icon = icon;
+        }
+
+        /** Read on every use: the theme colours follow the appearance settings. */
+        public int color() {
+            return switch (this) { case MINE -> Theme.SUCCESS; case PLACE -> Theme.ACCENT; case KILL -> Theme.DANGER; };
         }
     }
 

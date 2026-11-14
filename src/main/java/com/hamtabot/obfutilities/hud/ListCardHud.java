@@ -86,7 +86,7 @@ public abstract class ListCardHud implements HudElement {
         ctx.draw(() -> {
             Draw.overlayCard(ctx, 0, 0, sz[0], sz[1], accent, editing);
             ctx.drawText(tr, title, BAR_GAP, PAD, accent, false);
-            ctx.fill(BAR_GAP, PAD + LINE, sz[0] - PAD, PAD + LINE + 1, Theme.DIVIDER);
+            Draw.fill(ctx, BAR_GAP, PAD + LINE, sz[0] - PAD, PAD + LINE + 1, Theme.DIVIDER);
             int y = PAD + LINE + 3;
             for (Row r : rows) {
                 ctx.drawText(tr, r.name(), BAR_GAP, y, r.status().isEmpty() ? r.color() : Theme.TEXT, false);

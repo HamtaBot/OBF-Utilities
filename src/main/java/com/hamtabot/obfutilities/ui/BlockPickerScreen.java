@@ -162,7 +162,7 @@ public class BlockPickerScreen extends Screen {
 
     private void renderFooter(DrawContext ctx, int mouseX, int mouseY) {
         int fy = footerY();
-        ctx.fill(winX + 1, fy - 4, winX + winW - 1, fy - 3, Theme.DIVIDER);
+        Draw.fill(ctx, winX + 1, fy - 4, winX + winW - 1, fy - 3, Theme.DIVIDER);
 
         int n = selected.size();
         String count = n == 0 ? "Coche un ou plusieurs blocs" : n + (n > 1 ? " blocs sélectionnés" : " bloc sélectionné");

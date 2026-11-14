@@ -45,12 +45,15 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Consumer;
+import java.util.function.IntConsumer;
+import java.util.function.IntSupplier;
 import java.util.function.Supplier;
 
 public class ConfigScreen extends Screen {
 
     public enum Page {
         GENERAL  (Items.BOOK,            "HUD",           "Affichage et statistiques du HUD de session"),
+        APPEARANCE(Items.GLASS,          "Apparence",     "Style Liquid Glass, opacité et couleurs de l'interface et des HUD"),
         ADS      (Items.PAPER,           "Publicité",     "Enregistre ta pub et envoie-la en un clic"),
         AFK      (Items.RED_BED,         "AFK Timer",     "Temps passé dans ta zone AFK"),
         TIMERS   (Items.CLOCK,           "Timers",        "Chronos et comptes à rebours, affichables à l'écran"),
@@ -136,6 +139,7 @@ public class ConfigScreen extends Screen {
         List<Component> c = new ArrayList<>();
         switch (p) {
             case GENERAL   -> buildGeneral(c);
+            case APPEARANCE -> buildAppearance(c);
             case ADS       -> buildAds(c);
             case AFK       -> buildAfk(c);
             case TIMERS    -> buildTimers(c);
@@ -188,6 +192,58 @@ public class ConfigScreen extends Screen {
         c.add(new SectionTitle("Mises à jour"));
         c.add(new ToggleRow("Prévenir des mises à jour", "Vérifie sur GitHub à chaque lancement du jeu, et affiche un message dans le chat quand une nouvelle version est sortie.",
                 () -> cfg.updateCheckEnabled, v -> cfg.updateCheckEnabled = v));
+    }
+
+    private void buildAppearance(List<Component> c) {
+        c.add(new SectionTitle("Style"));
+        c.add(new ToggleRow("Liquid Glass", "Panneaux en verre translucide, coins lissés et bordures fines. Désactive-le pour retrouver l'ancien style opaque.",
+                () -> cfg.glassEnabled, v -> { cfg.glassEnabled = v; Theme.apply(cfg); refresh(); }));
+        if (cfg.glassEnabled) {
+            c.add(new SliderRow("Opacité du verre", "Plus elle est basse, plus on voit le jeu à travers les menus et les HUD.",
+                    0, 100, () -> Math.round(cfg.glassOpacity * 100), v -> { cfg.glassOpacity = v / 100f; Theme.apply(cfg); },
+                    v -> v == 0 ? "Transparent" : v == 100 ? "Opaque" : v + " %"));
+            c.add(new ToggleRow("Flou d'arrière-plan", "Floute le jeu derrière le verre, pour un texte lisible même à faible opacité. Très léger, mais désactivable sur un petit PC.",
+                    () -> cfg.glassBlur, v -> cfg.glassBlur = v));
+            c.add(color("Couleur du verre", "Teinte des panneaux. Sur un verre clair, les surfaces s'assombrissent toutes seules.",
+                    Theme.DEF_GLASS, () -> cfg.glassColor, v -> cfg.glassColor = v));
+        }
+
+        c.add(new SectionTitle("Textes"));
+        c.add(color("Texte principal", "Titres, noms et valeurs.", Theme.DEF_TEXT, () -> cfg.textColor, v -> cfg.textColor = v));
+        c.add(color("Texte secondaire", "Descriptions et libellés.", Theme.DEF_MUTED, () -> cfg.textMutedColor, v -> cfg.textMutedColor = v));
+        c.add(color("Texte discret", "Titres de section, indices et éléments désactivés.", Theme.DEF_DIM, () -> cfg.textDimColor, v -> cfg.textDimColor = v));
+
+        c.add(new SectionTitle("Couleurs"));
+        c.add(color("Accent", "Boutons, sélection, blocs posés, minuteur de session.", Theme.DEF_ACCENT, () -> cfg.accentColor, v -> cfg.accentColor = v));
+        c.add(color("Succès", "Blocs minés, « Disponible », objectifs terminés.", Theme.DEF_SUCCESS, () -> cfg.successColor, v -> cfg.successColor = v));
+        c.add(color("Avertissement", "Comptes à rebours, temps AFK, quêtes.", Theme.DEF_WARNING, () -> cfg.warningColor, v -> cfg.warningColor = v));
+        c.add(color("Danger", "Mobs tués, alertes, boutons de suppression.", Theme.DEF_DANGER, () -> cfg.dangerColor, v -> cfg.dangerColor = v));
+        c.add(color("Spécial", "Blocs suivis, prochaine pub, mémoire.", Theme.DEF_PURPLE, () -> cfg.purpleColor, v -> cfg.purpleColor = v));
+
+        c.add(new ButtonRow("Tout réinitialiser", "Remet le style, l'opacité et toutes les couleurs par défaut.",
+                "Réinitialiser", Draw.ButtonStyle.DANGER, () -> {
+                    ModConfig def = new ModConfig();
+                    cfg.glassEnabled = def.glassEnabled;
+                    cfg.glassBlur = def.glassBlur;
+                    cfg.glassOpacity = def.glassOpacity;
+                    cfg.glassColor = def.glassColor;
+                    cfg.textColor = def.textColor;
+                    cfg.textMutedColor = def.textMutedColor;
+                    cfg.textDimColor = def.textDimColor;
+                    cfg.accentColor = def.accentColor;
+                    cfg.successColor = def.successColor;
+                    cfg.warningColor = def.warningColor;
+                    cfg.dangerColor = def.dangerColor;
+                    cfg.purpleColor = def.purpleColor;
+                    Theme.apply(cfg);
+                    refresh();
+                }));
+        c.add(new InfoBox("Les couleurs s'appliquent tout de suite, partout : menus, HUD de session, timers, barres et overlays. "
+                + "Les couleurs propres à chaque job et à chaque waypoint ne changent pas.", Theme.ACCENT));
+    }
+
+    private ColorRow color(String title, String description, int def, IntSupplier getter, IntConsumer setter) {
+        return new ColorRow(title, description, def, getter, v -> { setter.accept(v); Theme.apply(cfg); });
     }
 
     private void buildAds(List<Component> c) {
@@ -671,8 +727,8 @@ public class ConfigScreen extends Screen {
 
     private void renderNav(DrawContext ctx, int mouseX, int mouseY) {
         int nx = winX + 1, ny = winY + HEADER_H + 1;
-        ctx.fill(nx, ny, nx + navW - 1, winY + winH - 2, Theme.SIDEBAR);
-        ctx.fill(nx + navW - 1, ny, nx + navW, winY + winH - 1, Theme.DIVIDER);
+        Draw.fill(ctx, nx, ny, nx + navW - 1, winY + winH - 2, Theme.SIDEBAR);
+        Draw.fill(ctx, nx + navW - 1, ny, nx + navW, winY + winH - 1, Theme.DIVIDER);
 
         hoveredNav = null;
         navList.render(ctx, mouseX, mouseY);
@@ -706,7 +762,7 @@ public class ConfigScreen extends Screen {
             if (hov) hoveredNav = target;
             if (selected) {
                 Draw.round(ctx, x, y, width, NAV_ITEM_H, Theme.ACCENT_SURFACE);
-                ctx.fill(x, y + 4, x + 2, y + NAV_ITEM_H - 4, Theme.ACCENT);
+                Draw.fill(ctx, x, y + 4, x + 2, y + NAV_ITEM_H - 4, Theme.ACCENT);
             } else if (hov) {
                 Draw.round(ctx, x, y, width, NAV_ITEM_H, Theme.SURFACE_HOVER);
             }

@@ -1,0 +1,19 @@
+{
+    "blend": {
+        "func": "add",
+        "srcrgb": "one",
+        "dstrgb": "zero"
+    },
+    "vertex": "obfutilities:blur",
+    "fragment": "obfutilities:blur",
+    "attributes": [
+        "Position",
+        "UV0"
+    ],
+    "samplers": [
+        { "name": "Sampler0" }
+    ],
+    "uniforms": [
+        { "name": "Dir", "type": "float", "count": 2, "values": [ 0.0, 0.0 ] }
+    ]
+}

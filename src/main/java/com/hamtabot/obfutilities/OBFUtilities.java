@@ -26,6 +26,7 @@ import com.hamtabot.obfutilities.stats.SessionStore;
 import com.hamtabot.obfutilities.stats.StatsReader;
 import com.hamtabot.obfutilities.storage.StorageUnit;
 import com.hamtabot.obfutilities.timer.Timers;
+import com.hamtabot.obfutilities.ui.Glass;
 import com.hamtabot.obfutilities.ui.HudEditScreen;
 import com.hamtabot.obfutilities.update.UpdateChecker;
 import com.hamtabot.obfutilities.warp.WarpMacros;
@@ -58,6 +59,7 @@ public class OBFUtilities implements ClientModInitializer {
     @Override
     public void onInitializeClient() {
         config = ModConfig.load();
+        Glass.register();
         hud = new OBFHud();
         SessionStore.load();
         AfkTimer.load();
@@ -107,6 +109,7 @@ public class OBFUtilities implements ClientModInitializer {
 
     /** Every on-screen HUD, in drawing order; the HUD editor draws them itself while open. */
     public static void renderHuds(DrawContext ctx, boolean editing) {
+        Glass.capture(ctx);
         BarLayout.newFrame(editing);
         InventoryHud.INSTANCE.render(ctx, editing);
         hud.render(ctx, editing);

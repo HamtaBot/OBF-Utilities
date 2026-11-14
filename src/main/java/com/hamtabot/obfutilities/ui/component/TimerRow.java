@@ -37,7 +37,7 @@ public class TimerRow extends Component {
     public void render(DrawContext ctx, int mouseX, int mouseY) {
         boolean hov = isHovered(mouseX, mouseY);
         Draw.card(ctx, x, y, width, H, hov ? Theme.SURFACE_HOVER : Theme.SURFACE, Theme.BORDER);
-        ctx.fill(x + 1, y + 3, x + 3, y + H - 3, Timers.color(timer));
+        Draw.fill(ctx, x + 1, y + 3, x + 3, y + H - 3, Timers.color(timer));
 
         int textW = actionX(Action.PLAY) - (x + 10) - 4;
         ctx.drawText(tr(), Draw.ellipsize(tr(), Timers.label(index, timer), textW), x + 10, y + 6, Theme.TEXT, false);

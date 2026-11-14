@@ -6,6 +6,7 @@ import com.hamtabot.obfutilities.objective.ObjectiveEntry;
 import com.hamtabot.obfutilities.timer.TimerEntry;
 import com.hamtabot.obfutilities.ui.HudElement;
 import com.hamtabot.obfutilities.ui.HudPos;
+import com.hamtabot.obfutilities.ui.Theme;
 import com.hamtabot.obfutilities.util.JsonFiles;
 
 import java.nio.file.Path;
@@ -78,6 +79,19 @@ public class ModConfig {
     public boolean updateCheckEnabled = true;
 
     public float scaleHud = 1.0f;
+
+    public boolean glassEnabled = true;
+    public boolean glassBlur    = true;
+    public float glassOpacity   = Theme.DEF_OPACITY;
+    public int glassColor       = Theme.DEF_GLASS;
+    public int textColor        = Theme.DEF_TEXT;
+    public int textMutedColor   = Theme.DEF_MUTED;
+    public int textDimColor     = Theme.DEF_DIM;
+    public int accentColor      = Theme.DEF_ACCENT;
+    public int purpleColor      = Theme.DEF_PURPLE;
+    public int successColor     = Theme.DEF_SUCCESS;
+    public int warningColor     = Theme.DEF_WARNING;
+    public int dangerColor      = Theme.DEF_DANGER;
 
     public boolean invHudEnabled = false;
     public HudPos  invHudPos     = new HudPos();
@@ -179,6 +193,7 @@ public class ModConfig {
         ModConfig cfg = JsonFiles.read(CONFIG_FILE, ModConfig.class, GSON);
         if (cfg == null) cfg = new ModConfig();
         cfg.sanitize();
+        Theme.apply(cfg);
         cfg.save();
         return cfg;
     }
@@ -231,6 +246,7 @@ public class ModConfig {
         questBarsScale = HudElement.clampScale(questBarsScale);
         objectiveBarsScale = HudElement.clampScale(objectiveBarsScale);
         infoBarsScale = HudElement.clampScale(infoBarsScale);
+        glassOpacity = clamp01(glassOpacity);
         invHudOpacity = clamp01(invHudOpacity);
         jobBarsOpacity = clamp01(jobBarsOpacity);
         skillBarsOpacity = clamp01(skillBarsOpacity);

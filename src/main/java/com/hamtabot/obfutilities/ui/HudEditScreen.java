@@ -39,12 +39,12 @@ public class HudEditScreen extends Screen {
 
     @Override
     public void render(DrawContext ctx, int mouseX, int mouseY, float delta) {
-        ctx.fill(0, 0, width, height, 0x60000000);
+        Draw.fill(ctx, 0, 0, width, height, 0x60000000);
 
-        ctx.fill(width / 2, 0, width / 2 + 1, height, 0x14FFFFFF);
-        ctx.fill(0, height / 2, width, height / 2 + 1, 0x14FFFFFF);
-        if (guideX >= 0) ctx.fill(guideX, 0, guideX + 1, height, GUIDE_COLOR);
-        if (guideY >= 0) ctx.fill(0, guideY, width, guideY + 1, GUIDE_COLOR);
+        Draw.fill(ctx, width / 2, 0, width / 2 + 1, height, 0x14FFFFFF);
+        Draw.fill(ctx, 0, height / 2, width, height / 2 + 1, 0x14FFFFFF);
+        if (guideX >= 0) Draw.fill(ctx, guideX, 0, guideX + 1, height, GUIDE_COLOR);
+        if (guideY >= 0) Draw.fill(ctx, 0, guideY, width, guideY + 1, GUIDE_COLOR);
 
         OBFUtilities.renderHuds(ctx, true);
         if (dragged == hud || resized == hud || (draggedOverlay == null && hud.isMouseOver(mouseX, mouseY))) {
@@ -76,7 +76,7 @@ public class HudEditScreen extends Screen {
     private void renderToolbar(DrawContext ctx, int mouseX, int mouseY) {
         int[] t = toolbar();
         Draw.shadow(ctx, t[0], t[1], t[2], t[3]);
-        Draw.card(ctx, t[0], t[1], t[2], t[3], Theme.WINDOW, Theme.WINDOW_BORDER);
+        Draw.panel(ctx, t[0], t[1], t[2], t[3], 1f, 0);
         String hint = Draw.ellipsize(textRenderer, HINT, t[2] - 16);
         ctx.drawText(textRenderer, hint, t[0] + (t[2] - textRenderer.getWidth(hint)) / 2, t[1] + 7, Theme.TEXT_MUTED, false);
 

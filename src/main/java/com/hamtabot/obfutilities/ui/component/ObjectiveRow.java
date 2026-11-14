@@ -36,7 +36,7 @@ public class ObjectiveRow extends Component {
         boolean hov = isHovered(mouseX, mouseY);
         boolean done = objective.isDone();
         Draw.card(ctx, x, y, width, H, hov ? Theme.SURFACE_HOVER : Theme.SURFACE, Theme.BORDER);
-        ctx.fill(x + 1, y + 3, x + 3, y + H - 3, done ? Theme.SUCCESS : objective.action().color);
+        Draw.fill(ctx, x + 1, y + 3, x + 3, y + H - 3, done ? Theme.SUCCESS : objective.action().color());
 
         ProgressBar card = Objectives.card(objective);
         int textW = restartX() - (x + 10) - 4;

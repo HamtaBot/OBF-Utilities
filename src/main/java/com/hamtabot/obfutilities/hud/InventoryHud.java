@@ -39,10 +39,10 @@ public final class InventoryHud implements HudElement {
         // so backgrounds, items and overlays are each drawn in their own batch
         ctx.draw(() -> {
             if (op > 0f) {
-                Draw.card(ctx, 0, 0, W, h, Draw.withOpacity(Theme.WINDOW, op), Draw.withOpacity(Theme.WINDOW_BORDER, op));
+                Draw.panel(ctx, 0, 0, W, h, op, 0);
                 if (cfg.invHudShowHotbar) {
                     int lineY = PAD + 3 * PITCH - 1 + HOTBAR_GAP / 2;
-                    ctx.fill(PAD, lineY, W - PAD, lineY + 1, Draw.withOpacity(Theme.DIVIDER, op));
+                    Draw.fill(ctx, PAD, lineY, W - PAD, lineY + 1, Draw.withOpacity(Theme.DIVIDER, op));
                 }
                 int surface = Draw.withOpacity(Theme.SURFACE, op), border = Draw.withOpacity(Theme.BORDER, op), accent = Draw.withOpacity(Theme.ACCENT, op);
                 for (int row = 0; row < rows; row++) {

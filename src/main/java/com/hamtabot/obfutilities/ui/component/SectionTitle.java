@@ -1,5 +1,6 @@
 package com.hamtabot.obfutilities.ui.component;
 
+import com.hamtabot.obfutilities.ui.Draw;
 import com.hamtabot.obfutilities.ui.Theme;
 import net.minecraft.client.gui.DrawContext;
 
@@ -16,6 +17,6 @@ public class SectionTitle extends Component {
         int ty = y + 6;
         ctx.drawText(tr(), text, x + 1, ty, Theme.TEXT_DIM, false);
         int lineX = x + tr().getWidth(text) + 7;
-        if (lineX < x + width) ctx.fill(lineX, ty + 4, x + width, ty + 5, Theme.DIVIDER);
+        if (lineX < x + width) Draw.fill(ctx, lineX, ty + 4, x + width, ty + 5, Theme.DIVIDER);
     }
 }

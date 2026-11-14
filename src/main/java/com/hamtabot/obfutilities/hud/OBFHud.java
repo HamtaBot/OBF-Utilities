@@ -86,7 +86,7 @@ public class OBFHud implements HudElement {
 
     private void renderPanel(DrawContext ctx, TextRenderer tr, ModConfig cfg, int pw, int ph, boolean editing) {
         Draw.shadow(ctx, posX, posY, pw, ph);
-        Draw.card(ctx, posX, posY, pw, ph, Theme.WINDOW, Theme.WINDOW_BORDER);
+        Draw.panel(ctx, posX, posY, pw, ph, 1f, 0);
         drawHeader(ctx, tr, pw);
         if (editing) Draw.resizeGrip(ctx, posX + pw, posY + ph);
 
@@ -134,7 +134,7 @@ public class OBFHud implements HudElement {
         int left = posX + s(PADDING), w = getWidth() - s(PADDING) * 2, right = left + w - s(6);
         int h = s(STAT_CARD_H);
         Draw.card(ctx, left, ty, w, h, Theme.SURFACE, Theme.BORDER);
-        ctx.fill(left + 1, ty + s(4), left + 3, ty + h - s(4), color);
+        Draw.fill(ctx, left + 1, ty + s(4), left + 3, ty + h - s(4), color);
 
         int tx = left + s(8), y = ty + s(4);
         String rate = counter.getRate() > 0f ? String.format("%.1f/s", counter.getRate()) : null;
@@ -162,7 +162,7 @@ public class OBFHud implements HudElement {
         int h = s(AD_CARD_H);
         boolean ok = AdTimer.isAvailable();
         Draw.card(ctx, left, ty, w, h, Theme.SURFACE, Theme.BORDER);
-        ctx.fill(left + 1, ty + s(3), left + 3, ty + h - s(3), Theme.PURPLE);
+        Draw.fill(ctx, left + 1, ty + s(3), left + 3, ty + h - s(3), Theme.PURPLE);
 
         int y = ty + (h - 8) / 2 + 1;
         int iy = y - 1;
@@ -178,7 +178,7 @@ public class OBFHud implements HudElement {
         int h = s(AD_CARD_H);
         boolean active = AfkTimer.isActive();
         Draw.card(ctx, left, ty, w, h, Theme.SURFACE, Theme.BORDER);
-        ctx.fill(left + 1, ty + s(3), left + 3, ty + h - s(3), Theme.WARNING);
+        Draw.fill(ctx, left + 1, ty + s(3), left + 3, ty + h - s(3), Theme.WARNING);
 
         int y = ty + (h - 8) / 2 + 1;
         int iy = y - 1;

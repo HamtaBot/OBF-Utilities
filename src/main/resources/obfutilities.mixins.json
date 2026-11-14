@@ -31,7 +31,8 @@
     "TextRendererAccessor",
     "GlyphRendererAccessor",
     "BitmapGlyphAccessor",
-    "ResourcePackMixin"
+    "ResourcePackMixin",
+    "DrawContextInvoker"
   ],
   "injectors": {
     "defaultRequire": 1

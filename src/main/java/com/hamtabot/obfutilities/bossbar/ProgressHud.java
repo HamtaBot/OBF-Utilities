@@ -287,8 +287,7 @@ public enum ProgressHud implements BarLayout.Block {
 
     /** {@code opacity} only fades the card background: the text and the progress bar stay readable. */
     private static void drawBackground(DrawContext ctx, ProgressBar bar, int w, boolean editing, float opacity) {
-        int border = bar.justLeveledUp() || bar.done ? Theme.SUCCESS : editing ? Theme.ACCENT : Draw.withOpacity(Theme.WINDOW_BORDER, opacity);
-        Draw.card(ctx, 0, 0, w, H, Draw.withOpacity(Theme.WINDOW, opacity), border);
+        Draw.panel(ctx, 0, 0, w, H, opacity, bar.justLeveledUp() || bar.done ? Theme.SUCCESS : editing ? Theme.ACCENT : 0);
 
         int tx = PAD, tw = w - PAD * 2;
         Draw.card(ctx, tx, TRACK_Y, tw, TRACK_H, Theme.INPUT, Theme.BORDER);
@@ -298,10 +297,10 @@ public enum ProgressHud implements BarLayout.Block {
             int steps = Math.min(ProgressBar.GRADIENT_STEPS, filled);
             for (int i = 0; i < steps; i++) {
                 int x0 = tx + 1 + filled * i / steps, x1 = tx + 1 + filled * (i + 1) / steps;
-                ctx.fill(x0, fy, x1, fy + fh, bar.gradient[i * ProgressBar.GRADIENT_STEPS / steps]);
+                Draw.fill(ctx, x0, fy, x1, fy + fh, bar.gradient[i * ProgressBar.GRADIENT_STEPS / steps]);
             }
             // light top edge so the fill reads as a bar, not a flat block
-            ctx.fill(tx + 1, fy, tx + 1 + filled, fy + 1, 0x33FFFFFF);
+            Draw.fill(ctx, tx + 1, fy, tx + 1 + filled, fy + 1, 0x33FFFFFF);
         }
     }
 

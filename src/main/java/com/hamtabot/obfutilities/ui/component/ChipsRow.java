@@ -58,7 +58,7 @@ public class ChipsRow extends Component {
             int cx = x + pos.get(i)[0], cy = y + pos.get(i)[1], w = chipWidth(c);
             boolean on = c.getter().getAsBoolean();
             boolean hov = Draw.inside(mouseX, mouseY, cx, cy, w, CHIP_H);
-            int bg = on ? (hov ? 0xFF22536B : 0xFF1A4256) : (hov ? Theme.SURFACE_ACTIVE : Theme.SURFACE_HOVER);
+            int bg = on ? (Theme.GLASS ? Draw.withOpacity(Theme.ACCENT, hov ? 0.34f : 0.24f) : hov ? 0xFF22536B : 0xFF1A4256) : (hov ? Theme.SURFACE_ACTIVE : Theme.SURFACE_HOVER);
             int border = on ? Theme.ACCENT_DARK : Theme.BORDER;
             Draw.card(ctx, cx, cy, w, CHIP_H, bg, border);
             Draw.round(ctx, cx + 5, cy + 6, 4, 4, on ? Theme.SUCCESS : Theme.TEXT_DIM);

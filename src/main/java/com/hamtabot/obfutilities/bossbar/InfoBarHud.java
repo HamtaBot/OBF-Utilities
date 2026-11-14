@@ -131,13 +131,12 @@ public final class InfoBarHud {
         // buffer, so drawing layer by layer costs three draws instead of a few per info
         ctx.draw(() -> {
             float opacity = OBFUtilities.config.infoBarsOpacity;
-            Draw.card(ctx, 0, 0, sz[0], sz[1], Draw.withOpacity(Theme.WINDOW, opacity),
-                    editing ? Theme.ACCENT : Draw.withOpacity(Theme.WINDOW_BORDER, opacity));
+            Draw.panel(ctx, 0, 0, sz[0], sz[1], opacity, editing ? Theme.ACCENT : 0);
             for (int pass = 0; pass <= TEXT; pass++) {
                 int y = PAD;
                 for (List<BossBars.Chip> row : rows) {
                     if (rowWidth(row) == 0) continue;
-                    if (pass == 0 && y > PAD && separators()) ctx.fill(PAD, y - 3, sz[0] - PAD, y - 2, separator(Theme.DIVIDER));
+                    if (pass == 0 && y > PAD && separators()) Draw.fill(ctx, PAD, y - 3, sz[0] - PAD, y - 2, separator(Theme.DIVIDER));
                     renderRow(ctx, tr, row, y + 1, sz[0] - PAD * 2, pass);
                     y += ROW_H;
                 }
@@ -173,7 +172,7 @@ public final class InfoBarHud {
             if (BossBars.isInfoHidden(chip)) continue;
             if (!first) {
                 int line = Math.round(x + gap / 2f);
-                if (pass == 0 && separators()) ctx.fill(line, y - 1, line + 1, y + 8, separator(Theme.BORDER));
+                if (pass == 0 && separators()) Draw.fill(ctx, line, y - 1, line + 1, y + 8, separator(Theme.BORDER));
                 x += gap;
             }
             first = false;

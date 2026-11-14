@@ -27,7 +27,26 @@ public final class Draw {
 
     public enum ButtonStyle { PRIMARY, SECONDARY, DANGER, GHOST }
 
+    private static boolean glass() { return Theme.GLASS && Glass.ready(); }
+
+    /** A thin line that stays close to one and a half screen pixels at every GUI scale. */
+    private static float hairline() {
+        float scale = (float) MinecraftClient.getInstance().getWindow().getScaleFactor();
+        return Math.max(0.5f, Math.min(1f, 1.5f / scale));
+    }
+
+    private static float radius(int w, int h) { return Math.min(5f, Math.min(w, h) / 2f); }
+
+    private static float panelRadius(int w, int h) { return Math.min(h >= 40 ? 8f : 6f, Math.min(w, h) / 2f); }
+
+    /** {@code ctx.fill}, but batched with the glass shapes so a HUD stays a single draw. */
+    public static void fill(DrawContext ctx, int x1, int y1, int x2, int y2, int color) {
+        if (glass()) Glass.shape(ctx, x1, y1, x2 - x1, y2 - y1, 0f, 0f, color, color);
+        else ctx.fill(x1, y1, x2, y2, color);
+    }
+
     public static void round(DrawContext ctx, int x, int y, int w, int h, int color) {
+        if (glass()) { Glass.shape(ctx, x, y, w, h, radius(w, h), 0f, color, color); return; }
         if (w <= 2 || h <= 2) { ctx.fill(x, y, x + w, y + h, color); return; }
         ctx.fill(x + 1, y, x + w - 1, y + h, color);
         ctx.fill(x, y + 1, x + 1, y + h - 1, color);
@@ -39,6 +58,12 @@ public final class Draw {
      * fill shows what is behind the card and not the border colour.
      */
     public static void card(DrawContext ctx, int x, int y, int w, int h, int fill, int border) {
+        if (glass()) {
+            float r = radius(w, h);
+            Glass.shape(ctx, x, y, w, h, r, 0f, fill, fill);
+            Glass.shape(ctx, x, y, w, h, r, hairline(), border, border);
+            return;
+        }
         if (w <= 4 || h <= 4) {
             round(ctx, x, y, w, h, border);
             round(ctx, x + 1, y + 1, w - 2, h - 2, fill);
@@ -56,10 +81,44 @@ public final class Draw {
         round(ctx, x + 1, y + 1, w - 2, h - 2, fill);
     }
 
+    /**
+     * The background of a window or a HUD: tinted glass with a rim of light, or the classic opaque card.
+     * {@code opacity} fades it out, {@code border} replaces the rim with a solid colour (0 keeps the rim).
+     */
+    public static void panel(DrawContext ctx, int x, int y, int w, int h, float opacity, int border) {
+        if (!glass()) {
+            card(ctx, x, y, w, h, withOpacity(Theme.WINDOW, opacity), border != 0 ? border : withOpacity(Theme.WINDOW_BORDER, opacity));
+            return;
+        }
+        float r = panelRadius(w, h);
+        int top = withOpacity(Theme.WINDOW_TOP, opacity), bottom = withOpacity(Theme.WINDOW, opacity);
+        if (Glass.hasBackdrop()) Glass.frosted(ctx, x, y, w, h, r, top, bottom);
+        else Glass.shape(ctx, x, y, w, h, r, 0f, top, bottom);
+        if (border != 0) { Glass.shape(ctx, x, y, w, h, r, hairline(), border, border); return; }
+        // the rim outlives a faint background a little, then fades with it
+        float rim = Math.min(1f, opacity * 2.5f);
+        Glass.shape(ctx, x, y, w, h, r, hairline(), withOpacity(Theme.RIM_TOP, rim), withOpacity(Theme.RIM_BOTTOM, rim));
+    }
+
     public static void shadow(DrawContext ctx, int x, int y, int w, int h) {
+        if (glass()) { Glass.shadow(ctx, x, y, w, h, panelRadius(w, h), 10f, 0x4D000000); return; }
         for (int i = 1; i <= 4; i++) {
             int alpha = 0x18 - i * 4;
             round(ctx, x - i, y - i + 2, w + i * 2, h + i * 2, alpha << 24);
+        }
+    }
+
+    /** A horizontal gradient through {@code stops}, clipped to a pill. */
+    public static void gradient(DrawContext ctx, int x, int y, int w, int h, int[] stops) {
+        int n = stops.length - 1;
+        for (int i = 0; i < n; i++) {
+            int x0 = x + w * i / n, x1 = x + w * (i + 1) / n;
+            if (glass()) {
+                Glass.quad(ctx, x, y, w, h, h / 2f, 0f, 0f, x0 - (i == 0 ? 0.5f : 0f), y - 0.5f, x1 + (i == n - 1 ? 0.5f : 0f), y + h + 0.5f,
+                        stops[i], stops[i + 1], stops[i + 1], stops[i]);
+            } else {
+                for (int px = x0; px < x1; px++) ctx.fill(px, y, px + 1, y + h, lerpColor(stops[i], stops[i + 1], (px - x0) / (float) (x1 - x0)));
+            }
         }
     }
 
@@ -69,10 +128,21 @@ public final class Draw {
                               String label, ButtonStyle style, boolean hovered, boolean enabled) {
         int bg, border, text;
         switch (style) {
-            case PRIMARY -> { bg = hovered ? 0xFF2B8DBF : ACCENT_BG; border = 0xFF3AA7DD; text = 0xFFFFFFFF; }
-            case DANGER  -> { bg = hovered ? 0xFF9B2C2C : Theme.DANGER_DARK; border = 0xFFB93838; text = 0xFFFFE4E4; }
+            case PRIMARY -> {
+                boolean stock = !Theme.GLASS && (Theme.ACCENT & 0xFFFFFF) == Theme.DEF_ACCENT;
+                bg = stock ? (hovered ? 0xFF2B8DBF : ACCENT_BG)
+                        : withOpacity(lerpColor(Theme.ACCENT_DARK, Theme.ACCENT, hovered ? 0.40f : 0.15f), Theme.GLASS ? 0.88f : 1f);
+                border = stock ? 0xFF3AA7DD : lerpColor(Theme.ACCENT_DARK, Theme.ACCENT, 0.70f);
+                text = 0xFFFFFFFF;
+            }
+            case DANGER  -> {
+                boolean stock = !Theme.GLASS && (Theme.DANGER & 0xFFFFFF) == Theme.DEF_DANGER;
+                bg = stock && hovered ? 0xFF9B2C2C : hovered ? lerpColor(Theme.DANGER_DARK, Theme.DANGER_STRONG, 0.45f) : Theme.DANGER_DARK;
+                border = stock ? 0xFFB93838 : lerpColor(Theme.DANGER_DARK, Theme.DANGER, 0.60f) | 0xFF000000;
+                text = 0xFFFFE4E4;
+            }
             case GHOST   -> { bg = hovered ? Theme.SURFACE_HOVER : 0x00000000; border = hovered ? Theme.BORDER : 0x00000000; text = hovered ? Theme.TEXT : Theme.TEXT_MUTED; }
-            default      -> { bg = hovered ? Theme.SURFACE_ACTIVE : Theme.SURFACE_HOVER; border = hovered ? 0xFF3C4250 : Theme.BORDER; text = Theme.TEXT; }
+            default      -> { bg = hovered ? Theme.SURFACE_ACTIVE : Theme.SURFACE_HOVER; border = hovered && !Theme.GLASS ? 0xFF3C4250 : Theme.BORDER; text = Theme.TEXT; }
         }
         if (!enabled) { bg = Theme.SURFACE; border = Theme.DIVIDER; text = Theme.TEXT_DIM; }
         card(ctx, x, y, w, h, bg, border);
@@ -93,9 +163,9 @@ public final class Draw {
         m.translate(cx, cy, 0);
         m.scale(0.25f, 0.25f, 1f);
         m.multiply(RotationAxis.POSITIVE_Z.rotationDegrees(45));
-        ctx.fill(-half, -3, half, 3, color);
+        fill(ctx, -half, -3, half, 3, color);
         m.multiply(RotationAxis.POSITIVE_Z.rotationDegrees(90));
-        ctx.fill(-half, -3, half, 3, color);
+        fill(ctx, -half, -3, half, 3, color);
         m.pop();
     }
 
@@ -155,7 +225,7 @@ public final class Draw {
         ms.push();
         ms.translate(cx, cy, 0);
         ms.scale(0.25f, 0.25f, 1f);
-        for (int i = 0; i < runs.length; i += 3) ctx.fill(runs[i + 1], runs[i], runs[i + 2], runs[i] + 1, color);
+        for (int i = 0; i < runs.length; i += 3) fill(ctx, runs[i + 1], runs[i], runs[i + 2], runs[i] + 1, color);
         ms.pop();
     }
 
@@ -178,19 +248,19 @@ public final class Draw {
     }
 
     public static void playIcon(DrawContext ctx, int cx, int cy, int color) {
-        for (int i = 0; i < 4; i++) ctx.fill(cx - 2 + i, cy - 3 + i, cx - 1 + i, cy + 4 - i, color);
+        for (int i = 0; i < 4; i++) fill(ctx, cx - 2 + i, cy - 3 + i, cx - 1 + i, cy + 4 - i, color);
     }
 
     public static void arrowIcon(DrawContext ctx, int cx, int cy, boolean up, int color) {
         for (int i = 0; i < 3; i++) {
             int row = up ? cy - 1 + i : cy + 1 - i;
-            ctx.fill(cx - i, row, cx + i + 1, row + 1, color);
+            fill(ctx, cx - i, row, cx + i + 1, row + 1, color);
         }
     }
 
     public static void pauseIcon(DrawContext ctx, int cx, int cy, int color) {
-        ctx.fill(cx - 3, cy - 3, cx - 1, cy + 4, color);
-        ctx.fill(cx + 1, cy - 3, cx + 3, cy + 4, color);
+        fill(ctx, cx - 3, cy - 3, cx - 1, cy + 4, color);
+        fill(ctx, cx + 1, cy - 3, cx + 3, cy + 4, color);
     }
 
     public static void restartIcon(DrawContext ctx, float cx, float cy, int color) {
@@ -202,6 +272,10 @@ public final class Draw {
     }
 
     public static void tintedCard(DrawContext ctx, int x, int y, int w, int h, int color) {
+        if (glass()) {
+            card(ctx, x, y, w, h, withOpacity(color, 0.10f), withOpacity(color, 0.32f));
+            return;
+        }
         round(ctx, x, y, w, h, (color & 0x00FFFFFF) | 0x1A000000);
         ctx.fill(x, y + 1, x + 2, y + h - 1, color);
     }
@@ -232,9 +306,10 @@ public final class Draw {
     }
 
     public static void window(DrawContext ctx, int screenW, int screenH, int x, int y, int w, int h, int headerH) {
-        ctx.fill(0, 0, screenW, screenH, Theme.OVERLAY);
+        Glass.capture(ctx);
+        fill(ctx, 0, 0, screenW, screenH, Theme.OVERLAY);
         shadow(ctx, x, y, w, h);
-        card(ctx, x, y, w, h, Theme.WINDOW, Theme.WINDOW_BORDER);
+        panel(ctx, x, y, w, h, 1f, 0);
         round(ctx, x + 1, y + 1, w - 2, headerH, Theme.HEADER);
         accentLine(ctx, x + 1, y + headerH, w - 2);
     }
@@ -266,9 +341,9 @@ public final class Draw {
 
     public static void resizeGrip(DrawContext ctx, int right, int bottom) {
         int gx = right - RESIZE_GRIP, gy = bottom - RESIZE_GRIP;
-        ctx.fill(gx + 2, gy + 6, gx + 4, gy + 8, Theme.ACCENT);
-        ctx.fill(gx + 4, gy + 4, gx + 6, gy + 6, Theme.ACCENT);
-        ctx.fill(gx + 6, gy + 2, gx + 8, gy + 4, Theme.ACCENT);
+        fill(ctx, gx + 2, gy + 6, gx + 4, gy + 8, Theme.ACCENT);
+        fill(ctx, gx + 4, gy + 4, gx + 6, gy + 6, Theme.ACCENT);
+        fill(ctx, gx + 6, gy + 2, gx + 8, gy + 4, Theme.ACCENT);
     }
 
     public static boolean inResizeGrip(double mx, double my, int right, int bottom) {
@@ -284,8 +359,9 @@ public final class Draw {
     }
 
     public static void overlayCard(DrawContext ctx, int x, int y, int w, int h, int accent, boolean editing) {
-        card(ctx, x, y, w, h, Theme.WINDOW, editing ? Theme.ACCENT : Theme.WINDOW_BORDER);
-        ctx.fill(x + 1, y + 3, x + 3, y + h - 3, accent);
+        panel(ctx, x, y, w, h, 1f, editing ? Theme.ACCENT : 0);
+        if (glass()) round(ctx, x + 2, y + 4, 2, h - 8, accent);
+        else ctx.fill(x + 1, y + 3, x + 3, y + h - 3, accent);
     }
 
     public static void headerTitle(DrawContext ctx, TextRenderer tr, int x, int y, int headerH, String text, int barColor) {
@@ -294,18 +370,17 @@ public final class Draw {
         ctx.drawText(tr, text, x + 8, ty, Theme.TEXT, true);
     }
 
-    private static final int[] ACCENT_GRADIENT = new int[24];
-    static {
-        for (int i = 0; i < ACCENT_GRADIENT.length; i++) {
-            ACCENT_GRADIENT[i] = lerpColor(Theme.ACCENT, Theme.ACCENT_LINE, i / (float) ACCENT_GRADIENT.length);
-        }
-    }
+    private static final int ACCENT_STEPS = 24;
 
     public static void accentLine(DrawContext ctx, int x, int y, int w) {
-        int steps = Math.max(1, Math.min(w, ACCENT_GRADIENT.length));
+        if (glass()) {
+            Glass.quad(ctx, x, y, w, 1, 0f, 0f, 0f, x, y, x + w, y + 1, Theme.ACCENT, Theme.ACCENT_LINE, Theme.ACCENT_LINE, Theme.ACCENT);
+            return;
+        }
+        int steps = Math.max(1, Math.min(w, ACCENT_STEPS));
         for (int i = 0; i < steps; i++) {
             int x0 = x + w * i / steps, x1 = x + w * (i + 1) / steps;
-            ctx.fill(x0, y, x1, y + 1, ACCENT_GRADIENT[i * ACCENT_GRADIENT.length / steps]);
+            ctx.fill(x0, y, x1, y + 1, lerpColor(Theme.ACCENT, Theme.ACCENT_LINE, (i * ACCENT_STEPS / steps) / (float) ACCENT_STEPS));
         }
     }
 

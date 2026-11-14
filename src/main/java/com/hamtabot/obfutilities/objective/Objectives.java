@@ -88,7 +88,7 @@ public final class Objectives {
     public static ProgressBar card(ObjectiveEntry o) {
         ProgressBar card = CARDS.get(o);
         if (card == null) {
-            card = ProgressBar.objective(o.displayName(), o.action().color, o.icon());
+            card = ProgressBar.objective(o.displayName(), o.action().color(), o.icon());
             update(card, o);
             card.fill.set(card.target());
             CARDS.put(o, card);

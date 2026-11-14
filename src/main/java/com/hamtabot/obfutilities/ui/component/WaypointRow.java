@@ -36,7 +36,7 @@ public class WaypointRow extends Component {
     public void render(DrawContext ctx, int mouseX, int mouseY) {
         boolean hov = isHovered(mouseX, mouseY);
         Draw.card(ctx, x, y, width, H, hov ? Theme.SURFACE_HOVER : Theme.SURFACE, Theme.BORDER);
-        ctx.fill(x + 1, y + 2, x + 3, y + H - 2, wp.color | 0xFF000000);
+        Draw.fill(ctx, x + 1, y + 2, x + 3, y + H - 2, wp.color | 0xFF000000);
 
         int textW = shareX() - (x + 10) - 4;
         ctx.drawText(tr(), Draw.ellipsize(tr(), wp.name, textW), x + 10, y + 6, wp.enabled ? Theme.TEXT : Theme.TEXT_DIM, false);
